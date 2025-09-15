@@ -12,7 +12,9 @@ local log = createDebugLogger("createVirtualizedListController")
 
 export type VirtualizedListController<T> = {
 	setScrollAxis: (scrollAxis: number) -> (),
+
 	setWindowAxis: (windowAxis: number) -> (),
+	getWindowAxis: () -> number,
 
 	setDataSource: (DataSources.DataSource<T>) -> (),
 
@@ -168,6 +170,10 @@ local function createVirtualizedListController<T>(
 		update()
 	end
 
+	local function getWindowAxis(): number
+		return windowAxis
+	end
+
 	local function setDataSource(newDataSource: DataSources.DataSource<T>)
 		assert(dataSource.type == newDataSource.type, "Data source type changed, you must keep it the same")
 
@@ -199,8 +205,10 @@ local function createVirtualizedListController<T>(
 
 	return {
 		setScrollAxis = setScrollAxis,
-		setWindowAxis = setWindowAxis,
 		setDataSource = setDataSource,
+
+		setWindowAxis = setWindowAxis,
+		getWindowAxis = getWindowAxis,
 
 		get = get,
 		getCanvasSize = getCanvasSize,

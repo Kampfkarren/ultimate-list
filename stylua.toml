@@ -1,1 +1,2 @@
+syntax = "Luau"
 sort_requires.enabled = true

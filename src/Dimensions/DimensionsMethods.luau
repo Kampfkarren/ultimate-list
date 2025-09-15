@@ -78,4 +78,31 @@ function DimensionsMethods.getUDimRect<T>(
 	end
 end
 
+function DimensionsMethods.elementsDisplayedHint<T>(
+	dimensions: Dimensions.Dimensions<T>,
+	windowAxis: number,
+	direction: "x" | "y"
+): number?
+	-- Uses of +2 are for supporting top and bottom clipped off
+	if dimensions.type == "consistentSize" then
+		return windowAxis // dimensions.size + 2
+	elseif dimensions.type == "consistentUDim2" then
+		if direction == "x" then
+			local amountPerColumn = 1 // dimensions.udim2.X.Scale
+			local columns = windowAxis // dimensions.udim2.Y.Offset + 2
+			return amountPerColumn * columns
+		elseif direction == "y" then
+			local amountPerRow = 1 // dimensions.udim2.Y.Scale
+			local rows = windowAxis // dimensions.udim2.X.Offset + 2
+			return amountPerRow * rows
+		else
+			return exhaustiveMatch(direction)
+		end
+	elseif dimensions.type == "getter" then
+		return nil
+	else
+		return exhaustiveMatch(dimensions.type)
+	end
+end
+
 return DimensionsMethods

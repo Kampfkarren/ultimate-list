@@ -1,15 +1,18 @@
 local Dimensions = {}
 
-export type Dimensions<T> = {
-	type: "getter",
-	callback: (value: T, index: number) -> UDimRect,
-} | {
-	type: "consistentSize",
-	size: number,
-} | {
-	type: "consistentUDim2",
-	udim2: UDim2,
-}
+export type Dimensions<T> =
+	{
+		type: "getter",
+		callback: (value: T, index: number) -> UDimRect,
+	}
+	| {
+		type: "consistentSize",
+		size: number,
+	}
+	| {
+		type: "consistentUDim2",
+		udim2: UDim2,
+	}
 
 export type UDimRect = {
 	size: UDim2,

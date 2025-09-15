@@ -3,6 +3,7 @@ local Src = script:FindFirstAncestor("UltimateList")
 local Dimensions = require(Src.Dimensions)
 local DimensionsMethods = require(Src.Dimensions.DimensionsMethods)
 local React = require(Src.Parent.React)
+local adjustPositionToScrollAxis = require(Src.Dimensions.adjustPositionToScrollAxis)
 local createVirtualizedListController = require(Src.createVirtualizedListController)
 
 local e = React.createElement
@@ -19,6 +20,8 @@ local function ReactStateRenderer<T>(props: {
 
 	callback: (T) -> React.Node,
 	getKey: ((value: T, index: number) -> string)?,
+
+	scrollAxisBinding: React.Binding<number>,
 })
 	local items, setItems = React.useState(props.virtualizedListController.get)
 
@@ -39,7 +42,9 @@ local function ReactStateRenderer<T>(props: {
 
 		children[getKey(item, index)] = e("Frame", {
 			BackgroundTransparency = 1,
-			Position = dimensionsRect.position,
+			Position = props.scrollAxisBinding:map(function(scrollAxis: number)
+				return adjustPositionToScrollAxis(dimensionsRect.position, scrollAxis, props.direction)
+			end),
 			Size = dimensionsRect.size,
 		}, props.callback(item))
 	end
