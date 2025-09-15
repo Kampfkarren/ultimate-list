@@ -36,11 +36,11 @@ local function ScrollingFrame<T>(
 		end)
 	end, {})
 
-	local onAbsoluteSizeChanged = React.useCallback(function(instance: ScrollingFrame)
+	local onAbsoluteWindowSizeChanged = React.useCallback(function(instance: ScrollingFrame)
 		virtualizedListController.setWindowAxis(
 			if props.direction == "x"
-				then instance.AbsoluteSize.X
-				elseif props.direction == "y" then instance.AbsoluteSize.Y
+				then instance.AbsoluteWindowSize.X
+				elseif props.direction == "y" then instance.AbsoluteWindowSize.Y
 				else exhaustiveMatch(props.direction)
 		)
 	end, { props.direction })
@@ -60,7 +60,7 @@ local function ScrollingFrame<T>(
 		CanvasSize = canvasSizeBinding,
 
 		-- Luau: No multiple indexers
-		[React.Change.AbsoluteSize] = onAbsoluteSizeChanged :: any,
+		[React.Change.AbsoluteWindowSize] = onAbsoluteWindowSizeChanged :: any,
 		[React.Change.CanvasPosition] = onCanvasPositionChanged :: any,
 		[React.Tag] = props.tag,
 	}, {

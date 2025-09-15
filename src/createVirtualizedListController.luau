@@ -50,13 +50,11 @@ local function createVirtualizedListController<T>(
 	-- getter: O(log n) assuming getter is O(1)
 	local function getIndexRangeInView(): Vector3
 		if dimensions.type == "consistentUDim2" then
-			local length = DataSourceMethods.length(dataSource)
-
 			-- Amount per row if we're Y direction,
 			-- amount per column if we're X.
 			local amountPerNonDominant = if direction == "x"
-				then math.ceil(length * dimensions.udim2.Y.Scale)
-				elseif direction == "y" then math.ceil(length * dimensions.udim2.X.Scale)
+				then 1 // dimensions.udim2.Y.Scale
+				elseif direction == "y" then 1 // dimensions.udim2.X.Scale
 				else exhaustiveMatch(direction)
 
 			local dominantSize = if direction == "x"
@@ -64,8 +62,10 @@ local function createVirtualizedListController<T>(
 				elseif direction == "y" then dimensions.udim2.Y.Offset
 				else exhaustiveMatch(direction)
 
+			log("getIndexRangeInView: amountPerDominant = %d, dominantSize = %d", amountPerNonDominant, dominantSize)
+
 			local head = 1 + ((scrollAxis // dominantSize) * amountPerNonDominant)
-			local tail = 1 + (((scrollAxis + windowAxis) // dominantSize) * amountPerNonDominant)
+			local tail = (1 + ((scrollAxis + windowAxis) // dominantSize)) * amountPerNonDominant
 
 			return Vector3.new(head, tail)
 		elseif dimensions.type == "consistentSize" then

@@ -19,7 +19,7 @@ return function(target)
 	}, {
 		ScrollingFrame = e(UltimateList.Components.ScrollingFrame, {
 			dataSource = UltimateList.DataSources.immutableArray(letters),
-			dimensions = UltimateList.Dimensions.consistentSize(48),
+			dimensions = UltimateList.Dimensions.consistentUDim2(UDim2.new(0.33, 0, 0, 72)),
 			renderer = UltimateList.Renderers.byState(function(value)
 				return e("TextLabel", {
 					BackgroundColor3 = Color3.new(1, 1, 1),

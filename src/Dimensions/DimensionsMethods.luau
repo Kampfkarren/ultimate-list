@@ -52,7 +52,7 @@ function DimensionsMethods.getUDimRect<T>(
 				size = dimensions.udim2,
 				position = UDim2.new(
 					0,
-					(index - 1) * dimensions.udim2.X.Offset,
+					(math.ceil(index / amountPerColumn) - 1) * dimensions.udim2.X.Offset,
 					dimensions.udim2.Y.Scale * ((index - 1) % amountPerColumn),
 					0
 				),
@@ -65,7 +65,7 @@ function DimensionsMethods.getUDimRect<T>(
 					dimensions.udim2.X.Scale * ((index - 1) % amountPerRow),
 					0,
 					0,
-					(index - 1) * dimensions.udim2.Y.Offset
+					(math.ceil(index / amountPerRow) - 1) * dimensions.udim2.Y.Offset
 				),
 			}
 		else
