@@ -11,7 +11,33 @@ export type DataSourceCursor<T> = {
 	after: () -> DataSourceCursor<T>?,
 }
 
-local function get<T>(dataSource: DataSources.DataSource<T>): DataSourceCursor<T>? end
+function DataSourceMethods.get<T>(dataSource: DataSources.DataSource<T>, startIndex: number): DataSourceCursor<T>?
+	assert(startIndex >= 1, "index < 1")
+
+	if dataSource.type == "immutableArray" then
+		local function get(index: number): DataSourceCursor<T>?
+			if index < 1 or index > #dataSource.array then
+				return nil
+			end
+
+			return {
+				before = function()
+					return get(index - 1)
+				end,
+
+				value = dataSource.array[index],
+
+				after = function()
+					return get(index + 1)
+				end,
+			}
+		end
+
+		return get(startIndex)
+	else
+		return exhaustiveMatch(dataSource.type)
+	end
+end
 
 function DataSourceMethods.getByRange<T>(dataSource: DataSources.DataSource<T>, range: Vector3): { T }
 	if dataSource.type == "immutableArray" then

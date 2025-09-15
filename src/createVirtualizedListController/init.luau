@@ -4,6 +4,7 @@ local DataSourceMethods = require(Src.DataSources.DataSourceMethods)
 local DataSources = require(Src.DataSources)
 local Dimensions = require(Src.Dimensions)
 local DimensionsMethods = require(Src.Dimensions.DimensionsMethods)
+local binarySearchIndexRangeInView = require(script.binarySearchIndexRangeInView)
 local createDebugLogger = require(Src.Util.createDebugLogger)
 local exhaustiveMatch = require(Src.Util.exhaustiveMatch)
 
@@ -28,6 +29,7 @@ type CurrentView<T> = {
 	canvasSize: UDim2,
 	cachedLastResult: { T },
 	offsetBoundaries: Vector3?,
+	dataSourceLength: number,
 }
 
 local function createVirtualizedListController<T>(
@@ -40,6 +42,7 @@ local function createVirtualizedListController<T>(
 		canvasSize = UDim2.new(),
 		scrollSizeAxis = 0,
 		cachedLastResult = {},
+		dataSourceLength = 0,
 	}
 
 	local scrollAxis = 0
@@ -74,7 +77,7 @@ local function createVirtualizedListController<T>(
 
 			return Vector3.new(head, tail)
 		elseif dimensions.type == "getter" then
-			error("TODO: Binary search")
+			return binarySearchIndexRangeInView(dataSource, dimensions.callback, scrollAxis, windowAxis, direction)
 		else
 			return exhaustiveMatch(dimensions.type)
 		end
@@ -89,11 +92,14 @@ local function createVirtualizedListController<T>(
 	end
 
 	local function update()
+		local length = DataSourceMethods.length(dataSource)
+
 		-- Only re-check if we actually will see anything new
 		if
 			currentView.offsetBoundaries ~= nil
 			and currentView.offsetBoundaries.X <= scrollAxis
 			and currentView.offsetBoundaries.Y >= windowAxis + scrollAxis
+			and currentView.dataSourceLength == length
 		then
 			return
 		end
@@ -109,6 +115,7 @@ local function createVirtualizedListController<T>(
 				canvasSize = UDim2.new(),
 				cachedLastResult = {},
 				offsetBoundaries = Vector3.new(scrollAxis, windowAxis + scrollAxis),
+				dataSourceLength = length,
 			}
 
 			callUpdateCallbacks()
@@ -145,6 +152,7 @@ local function createVirtualizedListController<T>(
 					elseif direction == "y" then bottomDimensions.position.Y.Offset + bottomDimensions.size.Y.Offset
 					else exhaustiveMatch(direction)
 			),
+			dataSourceLength = length,
 		}
 
 		callUpdateCallbacks()
