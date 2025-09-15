@@ -1,0 +1,23 @@
+{
+	"name": "tests",
+	"servePlaceIds": [
+		0
+	],
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedStorage": {
+			"Packages": {
+				"$path": "Packages",
+				"UltimateList": {
+					"$path": "src"
+				}
+			},
+			"DevPackages": {
+				"$path": "DevPackages"
+			},
+			"Stories": {
+				"$path": "stories"
+			}
+		}
+	}
+}

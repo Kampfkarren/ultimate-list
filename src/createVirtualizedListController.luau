@@ -1,0 +1,205 @@
+local Src = script:FindFirstAncestor("UltimateList")
+
+local DataSourceMethods = require(Src.DataSources.DataSourceMethods)
+local DataSources = require(Src.DataSources)
+local Dimensions = require(Src.Dimensions)
+local DimensionsMethods = require(Src.Dimensions.DimensionsMethods)
+local createDebugLogger = require(Src.Util.createDebugLogger)
+local exhaustiveMatch = require(Src.Util.exhaustiveMatch)
+
+local log = createDebugLogger("createVirtualizedListController")
+
+export type VirtualizedListController<T> = {
+	setScrollAxis: (scrollAxis: number) -> (),
+	setWindowAxis: (windowAxis: number) -> (),
+
+	setDataSource: (DataSources.DataSource<T>) -> (),
+
+	-- If the view has not changed, will return the identical last result
+	get: () -> { T },
+	getCanvasSize: () -> UDim2,
+	getRange: () -> Vector3,
+
+	bindToUpdate: (callback: () -> ()) -> () -> (),
+}
+
+type CurrentView<T> = {
+	range: Vector3,
+	canvasSize: UDim2,
+	cachedLastResult: { T },
+	offsetBoundaries: Vector3?,
+}
+
+local function createVirtualizedListController<T>(
+	dataSource: DataSources.DataSource<T>,
+	dimensions: Dimensions.Dimensions<T>,
+	direction: "x" | "y"
+): VirtualizedListController<T>
+	local currentView: CurrentView<T> = {
+		range = Vector3.new(),
+		canvasSize = UDim2.new(),
+		scrollSizeAxis = 0,
+		cachedLastResult = {},
+	}
+
+	local scrollAxis = 0
+	local windowAxis = 0
+
+	-- consistentUDim2: O(1)
+	-- consistentSize: O(1)
+	-- getter: O(log n) assuming getter is O(1)
+	local function getIndexRangeInView(): Vector3
+		if dimensions.type == "consistentUDim2" then
+			local length = DataSourceMethods.length(dataSource)
+
+			-- Amount per row if we're Y direction,
+			-- amount per column if we're X.
+			local amountPerNonDominant = if direction == "x"
+				then math.ceil(length * dimensions.udim2.Y.Scale)
+				elseif direction == "y" then math.ceil(length * dimensions.udim2.X.Scale)
+				else exhaustiveMatch(direction)
+
+			local dominantSize = if direction == "x"
+				then dimensions.udim2.X.Offset
+				elseif direction == "y" then dimensions.udim2.Y.Offset
+				else exhaustiveMatch(direction)
+
+			local head = 1 + ((scrollAxis // dominantSize) * amountPerNonDominant)
+			local tail = 1 + (((scrollAxis + windowAxis) // dominantSize) * amountPerNonDominant)
+
+			return Vector3.new(head, tail)
+		elseif dimensions.type == "consistentSize" then
+			local head = 1 + scrollAxis // dimensions.size
+			local tail = 1 + ((scrollAxis + windowAxis) // dimensions.size)
+
+			return Vector3.new(head, tail)
+		elseif dimensions.type == "getter" then
+			error("TODO: Binary search")
+		else
+			return exhaustiveMatch(dimensions.type)
+		end
+	end
+
+	local callbacks: { [() -> ()]: true? } = {}
+
+	local function callUpdateCallbacks()
+		for callback in callbacks do
+			callback()
+		end
+	end
+
+	local function update()
+		-- Only re-check if we actually will see anything new
+		if
+			currentView.offsetBoundaries ~= nil
+			and currentView.offsetBoundaries.X <= scrollAxis
+			and currentView.offsetBoundaries.Y >= windowAxis + scrollAxis
+		then
+			return
+		end
+
+		local newIndexRange = getIndexRangeInView()
+		local items = DataSourceMethods.getByRange(dataSource, newIndexRange)
+
+		if #items == 0 then
+			log("View changed, but no items in list")
+
+			currentView = {
+				range = newIndexRange,
+				canvasSize = UDim2.new(),
+				cachedLastResult = {},
+				offsetBoundaries = Vector3.new(scrollAxis, windowAxis + scrollAxis),
+			}
+
+			callUpdateCallbacks()
+
+			return
+		end
+
+		local topDimensions = DimensionsMethods.getUDimRect(dimensions, items[1], newIndexRange.X, direction)
+		local bottomDimensions = DimensionsMethods.getUDimRect(dimensions, items[#items], newIndexRange.Y, direction)
+
+		log(
+			"View changed: %d..%d (scroll axis: %d, window axis: %d, offset boundaries: %* - %*)",
+			newIndexRange.X,
+			newIndexRange.Y,
+			scrollAxis,
+			windowAxis,
+			currentView.offsetBoundaries and currentView.offsetBoundaries.X,
+			currentView.offsetBoundaries and currentView.offsetBoundaries.Y
+		)
+
+		currentView = {
+			range = newIndexRange,
+			-- TODO: Same deal with canvas size optimizations
+			canvasSize = DimensionsMethods.getCanvasSize(dimensions, dataSource, direction),
+			cachedLastResult = items,
+			offsetBoundaries = Vector3.new(
+				if direction == "x"
+					then topDimensions.position.X.Offset
+					elseif direction == "y" then topDimensions.position.Y.Offset
+					else exhaustiveMatch(direction),
+
+				if direction == "x"
+					then bottomDimensions.position.X.Offset + bottomDimensions.size.X.Offset
+					elseif direction == "y" then bottomDimensions.position.Y.Offset + bottomDimensions.size.Y.Offset
+					else exhaustiveMatch(direction)
+			),
+		}
+
+		callUpdateCallbacks()
+	end
+
+	local function setScrollAxis(newScrollAxis: number)
+		scrollAxis = newScrollAxis
+		update()
+	end
+
+	local function setWindowAxis(newWindowAxis: number)
+		windowAxis = newWindowAxis
+		update()
+	end
+
+	local function setDataSource(newDataSource: DataSources.DataSource<T>)
+		assert(dataSource.type == newDataSource.type, "Data source type changed, you must keep it the same")
+
+		-- TODO: This is where things like optimizations for append-only arrays can happen.
+		-- For example, with a getter function you can take the last value and start from there.
+
+		newDataSource = dataSource
+		update()
+	end
+
+	local function get(): { T }
+		return currentView.cachedLastResult
+	end
+
+	local function getCanvasSize(): UDim2
+		return currentView.canvasSize
+	end
+
+	local function getRange(): Vector3
+		return currentView.range
+	end
+
+	local function bindToUpdate(callback: () -> ()): () -> ()
+		callbacks[callback] = true
+		return function()
+			callbacks[callback] = nil
+		end
+	end
+
+	return {
+		setScrollAxis = setScrollAxis,
+		setWindowAxis = setWindowAxis,
+		setDataSource = setDataSource,
+
+		get = get,
+		getCanvasSize = getCanvasSize,
+		getRange = getRange,
+
+		bindToUpdate = bindToUpdate,
+	}
+end
+
+return createVirtualizedListController
