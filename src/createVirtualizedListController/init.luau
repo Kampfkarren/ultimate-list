@@ -140,7 +140,6 @@ local function createVirtualizedListController<T>(
 
 		currentView = {
 			range = newIndexRange,
-			-- TODO: Same deal with canvas size optimizations
 			canvasSize = DimensionsMethods.getCanvasSize(dimensions, dataSource, direction),
 			cachedLastResult = items,
 			offsetBoundaries = Vector3.new(
@@ -176,10 +175,6 @@ local function createVirtualizedListController<T>(
 
 	local function setDataSource(newDataSource: DataSources.DataSource<T>)
 		assert(dataSource.type == newDataSource.type, "Data source type changed, you must keep it the same")
-
-		-- TODO: This is where things like optimizations for append-only arrays can happen.
-		-- For example, with a getter function you can take the last value and start from there.
-
 		newDataSource = dataSource
 		update()
 	end
