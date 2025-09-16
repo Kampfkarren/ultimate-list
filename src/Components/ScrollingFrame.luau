@@ -29,6 +29,12 @@ local function ScrollingFrame<T>(
 		return createVirtualizedListController(props.dataSource, props.dimensions, props.direction)
 	end)
 
+	React.useEffect(function()
+		return function()
+			return virtualizedListController.destroy()
+		end
+	end, {})
+
 	local canvasSizeBinding, setCanvasSize = React.useBinding(virtualizedListController.getCanvasSize())
 	local windowSizeBinding, setWindowSize = React.useBinding(Vector2.zero)
 	local scrollAxisBinding, setScrollAxis = React.useBinding(0)

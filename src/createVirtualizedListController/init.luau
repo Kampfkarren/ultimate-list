@@ -24,6 +24,8 @@ export type VirtualizedListController<T> = {
 	getRange: () -> Vector3,
 
 	bindToUpdate: (callback: () -> ()) -> () -> (),
+
+	destroy: () -> (),
 }
 
 type CurrentView<T> = {
@@ -198,6 +200,16 @@ local function createVirtualizedListController<T>(
 		end
 	end
 
+	local disconnectMutableSourceUpdate: (() -> ())? = if dataSource.type == "mutableSource"
+		then dataSource.methods.bindToChanged(update)
+		else nil
+
+	local function destroy()
+		if disconnectMutableSourceUpdate ~= nil then
+			disconnectMutableSourceUpdate()
+		end
+	end
+
 	return {
 		setScrollAxis = setScrollAxis,
 		setDataSource = setDataSource,
@@ -210,6 +222,8 @@ local function createVirtualizedListController<T>(
 		getRange = getRange,
 
 		bindToUpdate = bindToUpdate,
+
+		destroy = destroy,
 	}
 end
 
