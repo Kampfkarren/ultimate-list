@@ -190,7 +190,7 @@ local function Demo()
 		Size = UDim2.fromOffset(WIDTH, 300),
 	}, {
 		ScrollingFrame = e(UltimateList.Components.ScrollingFrame, {
-			dataSource = UltimateList.DataSources.immutableArray(messages),
+			dataSource = UltimateList.DataSources.array(messages),
 
 			dimensions = UltimateList.Dimensions.getter(function(message: Message)
 				return {

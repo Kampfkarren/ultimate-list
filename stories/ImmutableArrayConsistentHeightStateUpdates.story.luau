@@ -31,7 +31,7 @@ local function Demo()
 		Size = UDim2.fromOffset(300, 300),
 	}, {
 		ScrollingFrame = e(UltimateList.Components.ScrollingFrame, {
-			dataSource = UltimateList.DataSources.immutableArray(numbers),
+			dataSource = UltimateList.DataSources.array(numbers),
 			dimensions = UltimateList.Dimensions.consistentSize(48),
 			renderer = UltimateList.Renderers.byState(function(value)
 				return e("TextLabel", {

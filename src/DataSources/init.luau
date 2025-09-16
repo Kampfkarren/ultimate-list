@@ -2,7 +2,7 @@ local DataSources = {}
 
 export type DataSource<T> =
 	{
-		type: "immutableArray",
+		type: "array",
 		array: { T },
 	}
 	| {
@@ -37,9 +37,9 @@ export type DataSourceCursor<T> = {
 	after: () -> DataSourceCursor<T>?,
 }
 
-function DataSources.immutableArray<T>(array: { T }): DataSource<T>
+function DataSources.array<T>(array: { T }): DataSource<T>
 	return {
-		type = "immutableArray",
+		type = "array",
 		array = array,
 	}
 end

@@ -11,7 +11,7 @@ function DataSourceMethods.get<T>(
 ): DataSources.DataSourceCursor<T>?
 	assert(startIndex >= 1, "index < 1")
 
-	if dataSource.type == "immutableArray" then
+	if dataSource.type == "array" then
 		local function get(index: number): DataSources.DataSourceCursor<T>?
 			if index < 1 or index > #dataSource.array then
 				return nil
@@ -39,7 +39,7 @@ function DataSourceMethods.get<T>(
 end
 
 function DataSourceMethods.getByRange<T>(dataSource: DataSources.DataSource<T>, range: Vector3): { T }
-	if dataSource.type == "immutableArray" then
+	if dataSource.type == "array" then
 		return table.move(dataSource.array, range.X, range.Y, 1, {})
 	elseif dataSource.type == "mutableSource" then
 		if dataSource.methods.getByRange == nil then
@@ -65,7 +65,7 @@ function DataSourceMethods.getByRange<T>(dataSource: DataSources.DataSource<T>, 
 end
 
 function DataSourceMethods.back<T>(dataSource: DataSources.DataSource<T>): T?
-	if dataSource.type == "immutableArray" then
+	if dataSource.type == "array" then
 		return dataSource.array[#dataSource.array]
 	elseif dataSource.type == "mutableSource" then
 		if dataSource.methods.back == nil then
@@ -80,7 +80,7 @@ function DataSourceMethods.back<T>(dataSource: DataSources.DataSource<T>): T?
 end
 
 function DataSourceMethods.length<T>(dataSource: DataSources.DataSource<T>): number
-	if dataSource.type == "immutableArray" then
+	if dataSource.type == "array" then
 		return #dataSource.array
 	elseif dataSource.type == "mutableSource" then
 		return dataSource.methods.length()
@@ -89,14 +89,14 @@ function DataSourceMethods.length<T>(dataSource: DataSources.DataSource<T>): num
 	end
 end
 
--- Shallow equals, basically just to make sure you can use `UltimateList.DataSources.immutableArray(array)` inline
+-- Shallow equals, basically just to make sure you can use `UltimateList.DataSources.array(array)` inline
 function DataSourceMethods.equals<T>(left: DataSources.DataSource<T>, right: DataSources.DataSource<T>): boolean
 	if left.type ~= right.type then
 		return false
 	end
 
-	if left.type == "immutableArray" then
-		assert(right.type == "immutableArray", "Luau")
+	if left.type == "array" then
+		assert(right.type == "array", "Luau")
 		return left.array == right.array
 	elseif left.type == "mutableSource" then
 		assert(right.type == "mutableSource", "Luau")

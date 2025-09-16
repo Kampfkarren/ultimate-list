@@ -36,7 +36,7 @@ return function(target)
 		Size = UDim2.fromOffset(300, 300),
 	}, {
 		ScrollingFrame = e(UltimateList.Components.ScrollingFrame, {
-			dataSource = UltimateList.DataSources.immutableArray(letters),
+			dataSource = UltimateList.DataSources.array(letters),
 			dimensions = UltimateList.Dimensions.getter(function(value: Letter, _index: number)
 				return value.dimensions
 			end),

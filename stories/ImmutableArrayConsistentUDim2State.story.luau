@@ -18,7 +18,7 @@ return function(target)
 		Size = UDim2.fromOffset(300, 300),
 	}, {
 		ScrollingFrame = e(UltimateList.Components.ScrollingFrame, {
-			dataSource = UltimateList.DataSources.immutableArray(letters),
+			dataSource = UltimateList.DataSources.array(letters),
 			dimensions = UltimateList.Dimensions.consistentUDim2(UDim2.new(0.33, 0, 0, 72)),
 			renderer = UltimateList.Renderers.byState(function(value)
 				return e("TextLabel", {
