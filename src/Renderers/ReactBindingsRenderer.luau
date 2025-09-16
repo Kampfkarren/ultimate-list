@@ -236,4 +236,6 @@ local function ReactBindingsRenderer<T>(props: {
 	return e(React.Fragment, {}, children)
 end
 
+ReactBindingsRenderer = React.memo(ReactBindingsRenderer) :: never
+
 return ReactBindingsRenderer

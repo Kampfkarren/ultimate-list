@@ -17,6 +17,7 @@ export type VirtualizedListController<T> = {
 	getWindowAxis: () -> number,
 
 	setDataSource: (DataSources.DataSource<T>) -> (),
+	setDimensions: (Dimensions.Dimensions<T>) -> (),
 
 	-- If the view has not changed, will return the identical last result
 	get: () -> { T },
@@ -31,6 +32,7 @@ export type VirtualizedListController<T> = {
 type CurrentView<T> = {
 	range: Vector3,
 	canvasSize: UDim2,
+	lastDimensions: Dimensions.Dimensions<T>,
 	cachedLastResult: { T },
 	offsetBoundaries: Vector3?,
 	dataSourceLength: number,
@@ -44,6 +46,7 @@ local function createVirtualizedListController<T>(
 	local currentView: CurrentView<T> = {
 		range = Vector3.new(),
 		canvasSize = UDim2.new(),
+		lastDimensions = dimensions,
 		scrollSizeAxis = 0,
 		cachedLastResult = {},
 		dataSourceLength = 0,
@@ -104,6 +107,7 @@ local function createVirtualizedListController<T>(
 			and currentView.offsetBoundaries.X <= scrollAxis
 			and currentView.offsetBoundaries.Y >= windowAxis + scrollAxis
 			and currentView.dataSourceLength == length
+			and currentView.lastDimensions == dimensions
 		then
 			return
 		end
@@ -117,6 +121,7 @@ local function createVirtualizedListController<T>(
 			currentView = {
 				range = newIndexRange,
 				canvasSize = UDim2.new(),
+				lastDimensions = dimensions,
 				cachedLastResult = {},
 				offsetBoundaries = Vector3.new(scrollAxis, windowAxis + scrollAxis),
 				dataSourceLength = length,
@@ -143,6 +148,7 @@ local function createVirtualizedListController<T>(
 		currentView = {
 			range = newIndexRange,
 			canvasSize = DimensionsMethods.getCanvasSize(dimensions, dataSource, direction),
+			lastDimensions = dimensions,
 			cachedLastResult = items,
 			offsetBoundaries = Vector3.new(
 				if direction == "x"
@@ -177,7 +183,12 @@ local function createVirtualizedListController<T>(
 
 	local function setDataSource(newDataSource: DataSources.DataSource<T>)
 		assert(dataSource.type == newDataSource.type, "Data source type changed, you must keep it the same")
-		newDataSource = dataSource
+		dataSource = newDataSource
+		update()
+	end
+
+	local function setDimensions(newDimensions: Dimensions.Dimensions<T>)
+		dimensions = newDimensions
 		update()
 	end
 
@@ -213,6 +224,7 @@ local function createVirtualizedListController<T>(
 	return {
 		setScrollAxis = setScrollAxis,
 		setDataSource = setDataSource,
+		setDimensions = setDimensions,
 
 		setWindowAxis = setWindowAxis,
 		getWindowAxis = getWindowAxis,

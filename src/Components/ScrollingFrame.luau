@@ -22,6 +22,9 @@ local function ScrollingFrame<T>(
 
 		direction: "x" | "y",
 
+		scrollingFrameRef: { current: ScrollingFrame? }?,
+		onScrollAxisChanged: ((newScrollAxis: number) -> ())?,
+
 		tag: string?,
 	}
 )
@@ -63,7 +66,19 @@ local function ScrollingFrame<T>(
 
 		virtualizedListController.setScrollAxis(scrollAxis)
 		setScrollAxis(scrollAxis)
-	end, { props.direction })
+
+		if props.onScrollAxisChanged ~= nil then
+			props.onScrollAxisChanged(scrollAxis)
+		end
+	end, { props.direction, props.onScrollAxisChanged } :: { unknown })
+
+	React.useEffect(function()
+		virtualizedListController.setDataSource(props.dataSource)
+	end, { props.dataSource })
+
+	React.useEffect(function()
+		virtualizedListController.setDimensions(props.dimensions)
+	end, { props.dimensions })
 
 	return e("Frame", {
 		BackgroundTransparency = 1,
@@ -78,6 +93,8 @@ local function ScrollingFrame<T>(
 			[React.Change.AbsoluteWindowSize] = onAbsoluteWindowSizeChanged :: any,
 			[React.Change.CanvasPosition] = onCanvasPositionChanged :: any,
 			[React.Tag] = props.tag,
+
+			ref = props.scrollingFrameRef,
 		}),
 
 		-- This is outside of the scrolling frame because CanvasPosition updates a bit too late even
