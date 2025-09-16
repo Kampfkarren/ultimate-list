@@ -89,4 +89,21 @@ function DataSourceMethods.length<T>(dataSource: DataSources.DataSource<T>): num
 	end
 end
 
+-- Shallow equals, basically just to make sure you can use `UltimateList.DataSources.immutableArray(array)` inline
+function DataSourceMethods.equals<T>(left: DataSources.DataSource<T>, right: DataSources.DataSource<T>): boolean
+	if left.type ~= right.type then
+		return false
+	end
+
+	if left.type == "immutableArray" then
+		assert(right.type == "immutableArray", "Luau")
+		return left.array == right.array
+	elseif left.type == "mutableSource" then
+		assert(right.type == "mutableSource", "Luau")
+		return left.methods == right.methods
+	else
+		return exhaustiveMatch(left.type)
+	end
+end
+
 return DataSourceMethods

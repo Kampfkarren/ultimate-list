@@ -183,11 +183,20 @@ local function createVirtualizedListController<T>(
 
 	local function setDataSource(newDataSource: DataSources.DataSource<T>)
 		assert(dataSource.type == newDataSource.type, "Data source type changed, you must keep it the same")
+
+		if DataSourceMethods.equals(dataSource, newDataSource) then
+			return
+		end
+
 		dataSource = newDataSource
 		update()
 	end
 
 	local function setDimensions(newDimensions: Dimensions.Dimensions<T>)
+		if DimensionsMethods.equals(dimensions, newDimensions) then
+			return
+		end
+
 		dimensions = newDimensions
 		update()
 	end

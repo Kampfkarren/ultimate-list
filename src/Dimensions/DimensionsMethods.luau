@@ -105,4 +105,24 @@ function DimensionsMethods.elementsDisplayedHint<T>(
 	end
 end
 
+-- Shallow equals.
+function DimensionsMethods.equals<T>(left: Dimensions.Dimensions<T>, right: Dimensions.Dimensions<T>): boolean
+	if left.type ~= right.type then
+		return false
+	end
+
+	if left.type == "getter" then
+		assert(right.type == "getter", "Luau")
+		return left.callback == right.callback
+	elseif left.type == "consistentSize" then
+		assert(right.type == "consistentSize", "Luau")
+		return left.size == right.size
+	elseif left.type == "consistentUDim2" then
+		assert(right.type == "consistentUDim2", "Luau")
+		return left.udim2 == right.udim2
+	else
+		return exhaustiveMatch(left.type)
+	end
+end
+
 return DimensionsMethods
