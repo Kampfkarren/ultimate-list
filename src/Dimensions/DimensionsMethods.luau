@@ -25,6 +25,48 @@ function DimensionsMethods.getCanvasSize<T>(
 		else exhaustiveMatch(direction)
 end
 
+local function getUDimSizeForConsistentSize(size: number, direction: "x" | "y"): UDim2
+	if direction == "x" then
+		return UDim2.new(0, size, 1, 0)
+	elseif direction == "y" then
+		return UDim2.new(1, 0, 0, size)
+	else
+		return exhaustiveMatch(direction)
+	end
+end
+
+local function getPositionForConsistentSize(size: number, index: number, direction: "x" | "y"): UDim2
+	if direction == "x" then
+		return UDim2.fromOffset(size * (index - 1), 0)
+	elseif direction == "y" then
+		return UDim2.fromOffset(0, size * (index - 1))
+	else
+		return exhaustiveMatch(direction)
+	end
+end
+
+local function getPositionForConsistentUDim2(udim2: UDim2, index: number, direction: "x" | "y"): UDim2
+	if direction == "x" then
+		local amountPerColumn = 1 // udim2.Y.Scale
+		return UDim2.new(
+			0,
+			(math.ceil(index / amountPerColumn) - 1) * udim2.X.Offset,
+			udim2.Y.Scale * ((index - 1) % amountPerColumn),
+			0
+		)
+	elseif direction == "y" then
+		local amountPerRow = 1 // udim2.X.Scale
+		return UDim2.new(
+			udim2.X.Scale * ((index - 1) % amountPerRow),
+			0,
+			0,
+			(math.ceil(index / amountPerRow) - 1) * udim2.Y.Offset
+		)
+	else
+		return exhaustiveMatch(direction)
+	end
+end
+
 function DimensionsMethods.getUDimRect<T>(
 	dimensions: Dimensions.Dimensions<T>,
 	item: T,
@@ -32,49 +74,57 @@ function DimensionsMethods.getUDimRect<T>(
 	direction: "x" | "y"
 ): Dimensions.UDimRect
 	if dimensions.type == "consistentSize" then
-		if direction == "x" then
-			return {
-				size = UDim2.new(0, dimensions.size, 1, 0),
-				position = UDim2.fromOffset(dimensions.size * (index - 1), 0),
-			}
-		elseif direction == "y" then
-			return {
-				size = UDim2.new(1, 0, 0, dimensions.size),
-				position = UDim2.fromOffset(0, dimensions.size * (index - 1)),
-			}
-		else
-			return exhaustiveMatch(direction)
-		end
+		return {
+			size = getUDimSizeForConsistentSize(dimensions.size, direction),
+			position = getPositionForConsistentSize(dimensions.size, index, direction),
+		}
 	elseif dimensions.type == "consistentUDim2" then
-		if direction == "x" then
-			local amountPerColumn = 1 // dimensions.udim2.Y.Scale
-			return {
-				size = dimensions.udim2,
-				position = UDim2.new(
-					0,
-					(math.ceil(index / amountPerColumn) - 1) * dimensions.udim2.X.Offset,
-					dimensions.udim2.Y.Scale * ((index - 1) % amountPerColumn),
-					0
-				),
-			}
-		elseif direction == "y" then
-			local amountPerRow = 1 // dimensions.udim2.X.Scale
-			return {
-				size = dimensions.udim2,
-				position = UDim2.new(
-					dimensions.udim2.X.Scale * ((index - 1) % amountPerRow),
-					0,
-					0,
-					(math.ceil(index / amountPerRow) - 1) * dimensions.udim2.Y.Offset
-				),
-			}
-		else
-			return exhaustiveMatch(direction)
-		end
+		return {
+			size = dimensions.udim2,
+			position = getPositionForConsistentUDim2(dimensions.udim2, index, direction),
+		}
 	elseif dimensions.type == "getter" then
 		return dimensions.callback(item, index)
+	elseif dimensions.type == "spaced" then
+		if dimensions.inner.type == "consistentSize" then
+			return {
+				size = getUDimSizeForConsistentSize(dimensions.inner.size, direction),
+				position = getPositionForConsistentSize(dimensions.inner.size + dimensions.spacing, index, direction),
+			}
+		elseif dimensions.inner.type == "consistentUDim2" then
+			return {
+				size = dimensions.inner.udim2,
+				position = getPositionForConsistentUDim2(
+					dimensions.inner.udim2
+						+ UDim2.fromOffset(
+							if direction == "x" then dimensions.spacing else 0,
+							if direction == "y" then dimensions.spacing else 0
+						),
+					index,
+					direction
+				),
+			}
+		elseif dimensions.inner.type == "getter" or dimensions.inner.type == "spaced" then
+			error("Unsupported spaced dimensions")
+		else
+			return exhaustiveMatch(dimensions.inner.type)
+		end
 	else
 		return exhaustiveMatch(dimensions.type)
+	end
+end
+
+local function getElementsDisplayedForUDim2(udim2: UDim2, windowAxis: number, direction: "x" | "y"): number
+	if direction == "x" then
+		local amountPerColumn = 1 // udim2.X.Scale
+		local columns = windowAxis // udim2.Y.Offset + 2
+		return amountPerColumn * columns
+	elseif direction == "y" then
+		local amountPerRow = 1 // udim2.Y.Scale
+		local rows = windowAxis // udim2.X.Offset + 2
+		return amountPerRow * rows
+	else
+		return exhaustiveMatch(direction)
 	end
 end
 
@@ -87,19 +137,27 @@ function DimensionsMethods.elementsDisplayedHint<T>(
 	if dimensions.type == "consistentSize" then
 		return windowAxis // dimensions.size + 2
 	elseif dimensions.type == "consistentUDim2" then
-		if direction == "x" then
-			local amountPerColumn = 1 // dimensions.udim2.X.Scale
-			local columns = windowAxis // dimensions.udim2.Y.Offset + 2
-			return amountPerColumn * columns
-		elseif direction == "y" then
-			local amountPerRow = 1 // dimensions.udim2.Y.Scale
-			local rows = windowAxis // dimensions.udim2.X.Offset + 2
-			return amountPerRow * rows
-		else
-			return exhaustiveMatch(direction)
-		end
+		return getElementsDisplayedForUDim2(dimensions.udim2, windowAxis, direction)
 	elseif dimensions.type == "getter" then
 		return nil
+	elseif dimensions.type == "spaced" then
+		if dimensions.inner.type == "consistentSize" then
+			return windowAxis // (dimensions.inner.size + dimensions.spacing) + 2
+		elseif dimensions.inner.type == "consistentUDim2" then
+			return getElementsDisplayedForUDim2(
+				dimensions.inner.udim2
+					+ UDim2.fromOffset(
+						if direction == "x" then dimensions.spacing else 0,
+						if direction == "y" then dimensions.spacing else 0
+					),
+				windowAxis,
+				direction
+			)
+		elseif dimensions.inner.type == "spaced" or dimensions.inner.type == "getter" then
+			error("Unsupported spaced dimensions")
+		else
+			return exhaustiveMatch(dimensions.inner.type)
+		end
 	else
 		return exhaustiveMatch(dimensions.type)
 	end
@@ -120,6 +178,9 @@ function DimensionsMethods.equals<T>(left: Dimensions.Dimensions<T>, right: Dime
 	elseif left.type == "consistentUDim2" then
 		assert(right.type == "consistentUDim2", "Luau")
 		return left.udim2 == right.udim2
+	elseif left.type == "spaced" then
+		assert(right.type == "spaced", "Luau")
+		return left.spacing == right.spacing
 	else
 		return exhaustiveMatch(left.type)
 	end

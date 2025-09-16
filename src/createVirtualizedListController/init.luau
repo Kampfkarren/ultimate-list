@@ -55,36 +55,60 @@ local function createVirtualizedListController<T>(
 	local scrollAxis = 0
 	local windowAxis = 0
 
+	local function getIndexRangeInViewForSize(size: number): Vector3
+		local head = 1 + scrollAxis // size
+		local tail = 1 + ((scrollAxis + windowAxis) // size)
+
+		return Vector3.new(head, tail)
+	end
+
+	local function getIndexRangeInViewForUDim2(udim2: UDim2): Vector3
+		-- Amount per row if we're Y direction,
+		-- amount per column if we're X.
+		local amountPerNonDominant = if direction == "x"
+			then 1 // udim2.Y.Scale
+			elseif direction == "y" then 1 // udim2.X.Scale
+			else exhaustiveMatch(direction)
+
+		local dominantSize = if direction == "x"
+			then udim2.X.Offset
+			elseif direction == "y" then udim2.Y.Offset
+			else exhaustiveMatch(direction)
+
+		log("getIndexRangeInView: amountPerDominant = %d, dominantSize = %d", amountPerNonDominant, dominantSize)
+
+		local head = 1 + ((scrollAxis // dominantSize) * amountPerNonDominant)
+		local tail = (1 + ((scrollAxis + windowAxis) // dominantSize)) * amountPerNonDominant
+
+		return Vector3.new(head, tail)
+	end
+
 	-- consistentUDim2: O(1)
 	-- consistentSize: O(1)
 	-- getter: O(log n) assuming getter is O(1)
 	local function getIndexRangeInView(): Vector3
 		if dimensions.type == "consistentUDim2" then
-			-- Amount per row if we're Y direction,
-			-- amount per column if we're X.
-			local amountPerNonDominant = if direction == "x"
-				then 1 // dimensions.udim2.Y.Scale
-				elseif direction == "y" then 1 // dimensions.udim2.X.Scale
-				else exhaustiveMatch(direction)
-
-			local dominantSize = if direction == "x"
-				then dimensions.udim2.X.Offset
-				elseif direction == "y" then dimensions.udim2.Y.Offset
-				else exhaustiveMatch(direction)
-
-			log("getIndexRangeInView: amountPerDominant = %d, dominantSize = %d", amountPerNonDominant, dominantSize)
-
-			local head = 1 + ((scrollAxis // dominantSize) * amountPerNonDominant)
-			local tail = (1 + ((scrollAxis + windowAxis) // dominantSize)) * amountPerNonDominant
-
-			return Vector3.new(head, tail)
+			return getIndexRangeInViewForUDim2(dimensions.udim2)
 		elseif dimensions.type == "consistentSize" then
-			local head = 1 + scrollAxis // dimensions.size
-			local tail = 1 + ((scrollAxis + windowAxis) // dimensions.size)
-
-			return Vector3.new(head, tail)
+			return getIndexRangeInViewForSize(dimensions.size)
 		elseif dimensions.type == "getter" then
 			return binarySearchIndexRangeInView(dataSource, dimensions.callback, scrollAxis, windowAxis, direction)
+		elseif dimensions.type == "spaced" then
+			if dimensions.inner.type == "consistentSize" then
+				return getIndexRangeInViewForSize(dimensions.inner.size + dimensions.spacing)
+			elseif dimensions.inner.type == "consistentUDim2" then
+				return getIndexRangeInViewForUDim2(
+					dimensions.inner.udim2
+						+ UDim2.fromOffset(
+							if direction == "x" then dimensions.spacing else 0,
+							if direction == "y" then dimensions.spacing else 0
+						)
+				)
+			elseif dimensions.inner.type == "spaced" or dimensions.inner.type == "getter" then
+				error("Unsupported spaced dimensions")
+			else
+				return exhaustiveMatch(dimensions.inner.type)
+			end
 		else
 			return exhaustiveMatch(dimensions.type)
 		end
