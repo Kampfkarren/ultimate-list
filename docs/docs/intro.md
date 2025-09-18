@@ -22,6 +22,8 @@ UltimateList supports:
 
 A basic list can be made with the following code:
 ```lua
+local e = React.createElement
+
 local letters = {}
 for offset = 0, 25 do
     table.insert(letters, string.char(string.byte("A") + offset))
@@ -55,6 +57,8 @@ return e("Frame", {
 
 Want a grid instead? Just change your [dimensions](./core-concepts/dimensions).
 ```lua
+local e = React.createElement
+
 local letters = {}
 for offset = 0, 25 do
     table.insert(letters, string.char(string.byte("A") + offset))

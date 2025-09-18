@@ -10,6 +10,8 @@ The simplest and most flexible approach is `UltimateList.Renderers.byState`. Thi
 A simple example for a virtualized list of strings would look like:
 
 ```lua
+local e = React.createElement
+
 -- ...
 renderer = UltimateList.Renderers.byState(function(item: string)
     return e("TextLabel", {

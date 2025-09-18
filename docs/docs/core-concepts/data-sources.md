@@ -16,6 +16,8 @@ The easiest data source to provide is a simple array. This can be done through `
 In the introduction example, we saw this:
 
 ```lua
+local e = React.createElement
+
 local letters = {}
 for offset = 0, 25 do
     table.insert(letters, string.char(string.byte("A") + offset))
@@ -30,6 +32,8 @@ return e(UltimateList.Components.ScrollingFrame, {
 
 If we wanted something more dynamic, it might look something like this:
 ```lua
+local e = React.createElement
+
 local letters: { string }, setLetters = React.useState({} :: { string })
 
 React.useEffect(function()

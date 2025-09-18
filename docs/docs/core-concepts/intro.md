@@ -2,6 +2,8 @@
 In [the introduction](../), you saw an example of a simple UltimateList.
 
 ```lua
+local e = React.createElement
+
 return e(UltimateList.Components.ScrollingFrame, {
     dataSource = UltimateList.DataSources.array(letters),
 
