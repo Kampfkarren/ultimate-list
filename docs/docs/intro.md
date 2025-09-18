@@ -54,7 +54,7 @@ return React.createElement("Frame", {
 ![A list of letters](../static/list.png)
 
 Want a grid instead? Just change your [dimensions](./core-concepts/dimensions).
-```luau
+```lua
 local letters = {}
 for offset = 0, 25 do
     table.insert(letters, string.char(string.byte("A") + offset))
@@ -90,7 +90,7 @@ return React.createElement("Frame", {
 
 ...or even swap for bindings to maximize your performance.
 
-```luau
+```lua
 renderer = UltimateList.Renderers.byBinding(function(valueBinding)
     return React.createElement("TextLabel", {
         BackgroundColor3 = Color3.new(1, 1, 1),
