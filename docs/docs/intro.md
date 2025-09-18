@@ -54,7 +54,7 @@ return React.createElement("Frame", {
 ![A list of letters](../static/list.png)
 
 Want a grid instead? Just change your [dimensions](./core-concepts/dimensions).
-```lua
+```luau
 local letters = {}
 for offset = 0, 25 do
     table.insert(letters, string.char(string.byte("A") + offset))
@@ -87,6 +87,23 @@ return React.createElement("Frame", {
 ```
 
 ![A grid of letters](../static/grid.png)
+
+...or even swap for bindings to maximize your performance.
+
+```luau
+renderer = UltimateList.Renderers.byBinding(function(valueBinding)
+    return React.createElement("TextLabel", {
+        BackgroundColor3 = Color3.new(1, 1, 1),
+        Font = Enum.Font.BuilderSansBold,
+        Text = valueBinding:map(function(value: string?)
+            return value or ""
+        end),
+        TextColor3 = Color3.new(0, 0, 0),
+        TextSize = 36,
+        Size = UDim2.fromScale(1, 1),
+    })
+end),
+```
 
 ## Installation
 UltimateList is available on [Wally](https://wally.run/). Add the install command provided by https://wally.run/package/kampfkarren/ultimate-list to your wally.toml.
