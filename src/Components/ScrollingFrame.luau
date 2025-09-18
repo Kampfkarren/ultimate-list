@@ -24,9 +24,11 @@ local function ScrollingFrame<T>(
 		direction: "x" | "y",
 
 		scrollingFrameRef: { current: ScrollingFrame? }?,
+		onAbsoluteWindowSizeChanged: ((newWindowSize: Vector2) -> ())?,
 		onScrollAxisChanged: ((newScrollAxis: number) -> ())?,
 
 		tag: string?,
+		native: { [any]: any }?,
 	}
 )
 	local virtualizedListController = React.useState(function()
@@ -57,7 +59,11 @@ local function ScrollingFrame<T>(
 				elseif props.direction == "y" then instance.AbsoluteWindowSize.Y
 				else exhaustiveMatch(props.direction)
 		)
-	end, { props.direction })
+
+		if props.onAbsoluteWindowSizeChanged ~= nil then
+			props.onAbsoluteWindowSizeChanged(instance.AbsoluteWindowSize)
+		end
+	end, { props.direction, props.onAbsoluteWindowSizeChanged } :: { unknown })
 
 	local onCanvasPositionChanged = React.useCallback(function(instance: ScrollingFrame)
 		local scrollAxis = if props.direction == "x"
@@ -85,22 +91,34 @@ local function ScrollingFrame<T>(
 		virtualizedListController.setDimensions(props.dimensions)
 	end, { props.dimensions })
 
+	local scrollingFrameProps = {
+		Size = UDim2.fromScale(1, 1),
+
+		CanvasSize = canvasSizeBinding,
+
+		-- Luau: No multiple indexers
+		[React.Change.AbsoluteWindowSize] = onAbsoluteWindowSizeChanged :: any,
+		[React.Change.CanvasPosition] = onCanvasPositionChanged :: any,
+		[React.Tag] = props.tag,
+
+		ref = props.scrollingFrameRef,
+	}
+
+	if props.native ~= nil then
+		for key, value in props.native do
+			if scrollingFrameProps[key] ~= nil then
+				error(`{key} is already used by UltimateList`)
+			end
+
+			scrollingFrameProps[key] = value
+		end
+	end
+
 	return e("Frame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
 	}, {
-		ScrollingFrame = e("ScrollingFrame", {
-			Size = UDim2.fromScale(1, 1),
-
-			CanvasSize = canvasSizeBinding,
-
-			-- Luau: No multiple indexers
-			[React.Change.AbsoluteWindowSize] = onAbsoluteWindowSizeChanged :: any,
-			[React.Change.CanvasPosition] = onCanvasPositionChanged :: any,
-			[React.Tag] = props.tag,
-
-			ref = props.scrollingFrameRef,
-		}),
+		ScrollingFrame = e("ScrollingFrame", scrollingFrameProps),
 
 		-- This is outside of the scrolling frame because CanvasPosition updates a bit too late even
 		-- in the case of bindings, showing you emptiness before we have a chance to react.

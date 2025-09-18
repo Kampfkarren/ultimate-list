@@ -48,6 +48,10 @@ return function(target)
 			direction = "y",
 
 			tag = "MyScrollingFrame",
+
+			native = {
+				BackgroundTransparency = 0.9,
+			},
 		}),
 	}))
 
