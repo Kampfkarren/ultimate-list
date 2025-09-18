@@ -13,7 +13,7 @@ Creates a ScrollingFrame that will make a virtualized list based on your specifi
 **Props**
 - `dataSource: DataSources.DataSource<T>`: The [data source](./core-concepts/data-sources) we are creating a list for.
 - `dimensions: Dimensions.Dimensions<T>`: The [dimensions](./core-concepts/dimensions) that will determine how big an item is, and where it is placed.
-- `renderer: Renderers.Renderer<T>`: The [renderer](./core-concepts/renderer) that will determine what an item looks like.
+- `renderer: Renderers.Renderer<T>`: The [renderer](./core-concepts/renderers) that will determine what an item looks like.
 - `direction: "x" | "y"`: "y" for a vertical list, "x" for a horizontal list.
 
 **Optional props**
@@ -141,7 +141,7 @@ These are the exported types of UltimateList. If you are using Wally, use [`wall
 Tagged union for the [dimensions](./core-concepts/dimensions). The contents of this are not considered stable, and you should always use the [Dimensions](#dimensions) API directly.
 
 ### `DataSource<T>`
-Tagged union for a [data source](./core-concepts/data-sources). The contents of this are not considered stable, and you should always use the [DataSources](#data-sources) API directly.
+Tagged union for a [data source](./core-concepts/data-sources). The contents of this are not considered stable, and you should always use the [DataSources](#datasources) API directly.
 
 ### `Renderer<T>`
 Tagged union for a [renderer](./core-concepts/renderers). The contents of this are not considered stable, and you should always use the [Renderers](#renderers) API directly.

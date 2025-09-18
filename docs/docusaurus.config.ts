@@ -6,7 +6,7 @@ import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
   title: "UltimateList",
-  tagline: "Dinosaurs are cool",
+  tagline: "",
   favicon: "img/favicon.ico",
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -18,8 +18,8 @@ const config: Config = {
   url: "https://kampfkarren.github.io",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: "/ultimate-list",
   // baseUrl: "/",
+  baseUrl: "/ultimate-list",
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
