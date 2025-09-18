@@ -18,8 +18,8 @@ const config: Config = {
   url: "https://kampfkarren.github.io",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  // baseUrl: "/ultimate-list",
-  baseUrl: "/",
+  baseUrl: "/ultimate-list",
+  // baseUrl: "/",
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
