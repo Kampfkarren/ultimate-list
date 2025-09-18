@@ -22,7 +22,7 @@ return function(target)
 			dimensions = UltimateList.Dimensions.consistentSize(48),
 			renderer = UltimateList.Renderers.byState(function(value)
 				return e("TextLabel", {
-					BackgroundColor3 = Color3.fromHSV((string.byte(value) - string.byte("A")) / 25, 0.5, 0.5),
+					BackgroundColor3 = Color3.new(1, 1, 1),
 					Font = Enum.Font.BuilderSansBold,
 					Text = value,
 					TextColor3 = Color3.new(0, 0, 0),

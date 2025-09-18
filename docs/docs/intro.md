@@ -5,7 +5,12 @@ sidebar_position: 1
 # Introduction
 UltimateList is a library for creating fast and efficient virtualized lists in Roblox. A virtualized list is a scrolling frame that only creates elements for items that can actually be seen. This puts less work on the engine, defers running code in React components until they can be seen (as well as cleaning up when they're not), and in some cases can do this while also performing zero React re-renders as a user interacts with the list.
 
-<!-- TODO: Show video comparing non-virtualized and virtualized lists -->
+<video controls style={{
+    width: "100%",
+    maxWidth: "800px",
+}}>
+    <source src={require("@site/static/example_virtualized.mp4").default} type="video/mp4" />
+</video>
 
 UltimateList supports:
 - Arbitrarily sized and positioned elements, so it is just as easy to create a list as it is a grid.
@@ -46,7 +51,7 @@ return e("Frame", {
 })
 ```
 
-<!-- TODO: Image -->
+![A list of letters](../static/list.png)
 
 Want a grid instead? Just change your [dimensions](./core-concepts/dimensions).
 ```lua
@@ -81,7 +86,7 @@ return e("Frame", {
 })
 ```
 
-<!-- TODO: Image -->
+![A grid of letters](../static/grid.png)
 
 ## Installation
 UltimateList is available on [Wally](https://wally.run/). After installing Wally, add the following to your `wally.toml`:

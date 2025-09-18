@@ -97,6 +97,18 @@ Specifies that the size and position of an item is not the same for all of them,
 
 See also: [dynamically determined size and position](./core-concepts/dimensions#dynamically-determined-size-and-position).
 
+### `withSpacing`
+```ts
+Dimensions.withSpacing<T>(
+    inner: Dimensions<T>,
+    spacing: number
+)
+```
+
+Given a consistent set of dimensions, will adding spacing in between each element.
+
+See also: [spaced dimensions](./core-concepts/dimensions#spaced-dimensions).
+
 ## Renderers
 The set of [renderers](./core-concepts/renderers) that dictate how an item turns into a React component to display. For all of these, `T` represents the type of the items you are displaying.
 
