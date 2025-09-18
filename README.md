@@ -5,13 +5,13 @@ Read the documentation [**here**](https://kampfkarren.github.io/ultimate-list).
 
 ## Example usage
 ```luau
-return e(UltimateList.Components.ScrollingFrame, {
+return React.createElement(UltimateList.Components.ScrollingFrame, {
     dataSource = UltimateList.DataSources.array(letters),
 
     dimensions = UltimateList.Dimensions.consistentSize(48),
 
     renderer = UltimateList.Renderers.byState(function(value)
-        return e("TextLabel", {
+        return React.createElement("TextLabel", {
             BackgroundColor3 = Color3.new(1, 1, 1),
             Font = Enum.Font.BuilderSansBold,
             Text = value,

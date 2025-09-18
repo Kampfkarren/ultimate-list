@@ -9,10 +9,10 @@ UltimateList ScrollingFrames start out with default properties except for settin
 For things like size, you can style the container you put the ScrollingFrame into. For example, if you want a ScrollingFrame to be 300x300, you can do that like so:
 
 ```lua
-return e("Frame", {
+return React.createElement("Frame", {
     Size = UDim2.fromOffset(300, 300),
 }, {
-    ScrollingFrame = e(UltimateList.Components.ScrollingFrame, {
+    ScrollingFrame = React.createElement(UltimateList.Components.ScrollingFrame, {
         -- etc
     })
 })
@@ -27,7 +27,7 @@ ScrollingFrame comes with a `tag` property that can be used alongside [the Roblo
 When style sheets don't work, or when you need to hook onto events, you can use the `native` property, which will forward everything to the ScrollingFrame:
 
 ```lua
-return e(UltimateList.Components.ScrollingFrame, {
+return React.createElement(UltimateList.Components.ScrollingFrame, {
     native = {
         BackgroundTransparency = 1,
     },

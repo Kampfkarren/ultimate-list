@@ -16,14 +16,12 @@ The easiest data source to provide is a simple array. This can be done through `
 In the introduction example, we saw this:
 
 ```lua
-local e = React.createElement
-
 local letters = {}
 for offset = 0, 25 do
     table.insert(letters, string.char(string.byte("A") + offset))
 end
 
-return e(UltimateList.Components.ScrollingFrame, {
+return React.createElement(UltimateList.Components.ScrollingFrame, {
     dataSource = UltimateList.DataSources.array(letters),
 
     -- Rest omitted...
@@ -32,8 +30,6 @@ return e(UltimateList.Components.ScrollingFrame, {
 
 If we wanted something more dynamic, it might look something like this:
 ```lua
-local e = React.createElement
-
 local letters: { string }, setLetters = React.useState({} :: { string })
 
 React.useEffect(function()
@@ -55,7 +51,7 @@ React.useEffect(function()
     end
 end, {})
 
-return e(UltimateList.Components.ScrollingFrame, {
+return React.createElement(UltimateList.Components.ScrollingFrame, {
     dataSource = UltimateList.DataSources.array(letters),
 
     -- Rest omitted...

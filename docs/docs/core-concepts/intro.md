@@ -2,15 +2,13 @@
 In [the introduction](../), you saw an example of a simple UltimateList.
 
 ```lua
-local e = React.createElement
-
-return e(UltimateList.Components.ScrollingFrame, {
+return React.createElement(UltimateList.Components.ScrollingFrame, {
     dataSource = UltimateList.DataSources.array(letters),
 
     dimensions = UltimateList.Dimensions.consistentSize(48),
 
     renderer = UltimateList.Renderers.byState(function(value)
-        return e("TextLabel", {
+        return React.createElement("TextLabel", {
             BackgroundColor3 = Color3.new(1, 1, 1),
             Font = Enum.Font.BuilderSansBold,
             Text = value,

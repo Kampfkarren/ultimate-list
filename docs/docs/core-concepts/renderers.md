@@ -10,11 +10,9 @@ The simplest and most flexible approach is `UltimateList.Renderers.byState`. Thi
 A simple example for a virtualized list of strings would look like:
 
 ```lua
-local e = React.createElement
-
 -- ...
 renderer = UltimateList.Renderers.byState(function(item: string)
-    return e("TextLabel", {
+    return React.createElement("TextLabel", {
         -- UltimateList puts your item in a frame matching
         -- your specified size and position.
         Size = UDim2.fromScale(1, 1),
@@ -33,19 +31,19 @@ local function MyComplicatedComponent(props: {
     local inventoryItems = {}
 
     for _, item in inventory do
-        inventoryItems[item.key] = e(InventoryItem, {
+        inventoryItems[item.key] = React.createElement(InventoryItem, {
             item = item,
         })
     end
 
-    return e(PlayerCard, {
+    return React.createElement(PlayerCard, {
         name = name,
     }, inventoryItems)
 end
 
 -- ...
 renderer = UltimateList.Renderers.byState(function(item: Player)
-    return e(MyComplicatedComponent, {
+    return React.createElement(MyComplicatedComponent, {
         player = item,
     })
 end)
@@ -57,7 +55,7 @@ If you can represent the data of your item entirely through properties, then you
 For example, a player list might only need to represent the player's name as text, and thus can use:
 ```lua
 renderer = UltimateList.Renderers.byBinding(function(playerBinding: React.Binding<Player?>)
-    return e("TextLabel", {
+    return React.createElement("TextLabel", {
         Size = UDim2.fromScale(1, 1),
 
         Text = playerBinding:map(function(player: Player?)

@@ -22,23 +22,21 @@ UltimateList supports:
 
 A basic list can be made with the following code:
 ```lua
-local e = React.createElement
-
 local letters = {}
 for offset = 0, 25 do
     table.insert(letters, string.char(string.byte("A") + offset))
 end
 
-return e("Frame", {
+return React.createElement("Frame", {
     Size = UDim2.fromOffset(300, 300),
 }, {
-    ScrollingFrame = e(UltimateList.Components.ScrollingFrame, {
+    ScrollingFrame = React.createElement(UltimateList.Components.ScrollingFrame, {
         dataSource = UltimateList.DataSources.array(letters),
 
         dimensions = UltimateList.Dimensions.consistentSize(48),
 
         renderer = UltimateList.Renderers.byState(function(value)
-            return e("TextLabel", {
+            return React.createElement("TextLabel", {
                 BackgroundColor3 = Color3.new(1, 1, 1),
                 Font = Enum.Font.BuilderSansBold,
                 Text = value,
@@ -57,17 +55,15 @@ return e("Frame", {
 
 Want a grid instead? Just change your [dimensions](./core-concepts/dimensions).
 ```lua
-local e = React.createElement
-
 local letters = {}
 for offset = 0, 25 do
     table.insert(letters, string.char(string.byte("A") + offset))
 end
 
-return e("Frame", {
+return React.createElement("Frame", {
     Size = UDim2.fromOffset(300, 300),
 }, {
-    ScrollingFrame = e(UltimateList.Components.ScrollingFrame, {
+    ScrollingFrame = React.createElement(UltimateList.Components.ScrollingFrame, {
         dataSource = UltimateList.DataSources.array(letters),
         
         dimensions = UltimateList.Dimensions.consistentUDim2(
@@ -75,7 +71,7 @@ return e("Frame", {
         ),
 
         renderer = UltimateList.Renderers.byState(function(value)
-            return e("TextLabel", {
+            return React.createElement("TextLabel", {
                 BackgroundColor3 = Color3.new(1, 1, 1),
                 Font = Enum.Font.BuilderSansBold,
                 Text = value,
