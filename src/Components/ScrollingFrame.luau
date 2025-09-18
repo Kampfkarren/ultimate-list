@@ -1,3 +1,4 @@
+local RunService = game:GetService("RunService")
 local Src = script:FindFirstAncestor("UltimateList")
 
 local DataSources = require(Src.DataSources)
@@ -64,12 +65,16 @@ local function ScrollingFrame<T>(
 			elseif props.direction == "y" then instance.CanvasPosition.Y
 			else exhaustiveMatch(props.direction)
 
-		virtualizedListController.setScrollAxis(scrollAxis)
-		setScrollAxis(scrollAxis)
+		-- In deferred signals, position properties update only on the frame *after*,
+		-- which causes visible flickering.
+		RunService.Heartbeat:Once(function()
+			virtualizedListController.setScrollAxis(scrollAxis)
+			setScrollAxis(scrollAxis)
 
-		if props.onScrollAxisChanged ~= nil then
-			props.onScrollAxisChanged(scrollAxis)
-		end
+			if props.onScrollAxisChanged ~= nil then
+				props.onScrollAxisChanged(scrollAxis)
+			end
+		end)
 	end, { props.direction, props.onScrollAxisChanged } :: { unknown })
 
 	React.useEffect(function()
