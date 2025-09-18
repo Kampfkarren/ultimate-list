@@ -4,12 +4,6 @@ sidebar_position: 2
 # Data Sources
 A data source represents what data will be rendered in the list. For example, the data for a chat room would be the messages sent, as well as metadata such as who sent them.
 
-:::warning
-
-Whatever data source you choose, elements **must** be sorted in ascending order.
-
-:::
-
 ## Arrays
 The easiest data source to provide is a simple array. This can be done through `UltimateList.DataSources.array`. This array must be immutable like React state usually is--you must provide a different array to the UltimateList in order to update it.
 
@@ -74,7 +68,7 @@ A mutable source assumes nothing about the underlying data, and instead calls to
 
 #### `get: (startIndex: number) -> DataSourceCursor<T>?`
 
-Given an index, provides a cursor that points to that value, if it exists, as well as provides a way to go forwards and backwards.
+Given an index, provides a cursor that points to that value, if it exists, as well as provides a way to go forwards and backwards. The results provided by `get` **must** be sorted in ascending order.
 
 `DataSourceCursor<T>` is defined as follows:
 ```ts
