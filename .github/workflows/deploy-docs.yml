@@ -11,26 +11,27 @@ jobs:
   build:
     name: Build Docusaurus
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./docs
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: actions/setup-node@v4
         with:
           node-version: 18
 
       - name: Install dependencies
         run: npm ci
+        working-directory: ./docs
+
       - name: Build website
         run: npm run build
+        working-directory: ./docs
 
       - name: Upload Build Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build
+          path: ./docs/build
 
   deploy:
     name: Deploy to GitHub Pages
