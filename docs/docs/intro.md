@@ -1,7 +1,3 @@
----
-slug: /
-sidebar_position: 1
----
 # Introduction
 UltimateList is a library for creating fast and efficient virtualized lists in Roblox. A virtualized list is a scrolling frame that only creates elements for items that can actually be seen. This puts less work on the engine, defers running code in React components until they can be seen (as well as cleaning up when they're not), and in some cases can do this while also performing zero React re-renders as a user interacts with the list.
 
@@ -89,12 +85,7 @@ return e("Frame", {
 ![A grid of letters](../static/grid.png)
 
 ## Installation
-UltimateList is available on [Wally](https://wally.run/). After installing Wally, add the following to your `wally.toml`:
-
-<!-- TODO: Can the version number be automated? -->
-```toml
-UltimateList = "kampfkarren/ultimate-list@1.0.0"
-```
+UltimateList is available on [Wally](https://wally.run/). Add the install command provided by https://wally.run/package/kampfkarren/ultimate-list to your wally.toml.
 
 After doing that, run `wally install`. To make strict typing easier, you may also run [`wally-package-types`](https://github.com/JohnnyMorganz/wally-package-types) to re-export the public types.
 
