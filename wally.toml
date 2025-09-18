@@ -3,7 +3,8 @@ name = "kampfkarren/ultimate-list"
 version = "0.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
-include = ["/src"]
+exclude = ["*"]
+include = ["src", "default.project.json", "wally.toml"]
 
 [dependencies]
 React = "jsdotlua/react@17.2.1"
