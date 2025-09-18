@@ -25,7 +25,5 @@ return e(UltimateList.Components.ScrollingFrame, {
 })
 ```
 
-![A video representing a virtualized list of letters](./docs/static/example_virtualized.mp4).
-
 ## Installation
 UltimateList is available on Wally under [`kampfkarren/ultimate-list`](https://wally.run/package/kampfkarren/ultimate-list).
