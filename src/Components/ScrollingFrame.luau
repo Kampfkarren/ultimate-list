@@ -23,7 +23,7 @@ local function ScrollingFrame<T>(
 
 		direction: "x" | "y",
 
-		scrollingFrameRef: { current: ScrollingFrame? }?,
+		scrollingFrameRef: React.Ref<ScrollingFrame>?,
 		onAbsoluteWindowSizeChanged: ((newWindowSize: Vector2) -> ())?,
 		onScrollAxisChanged: ((newScrollAxis: number) -> ())?,
 
