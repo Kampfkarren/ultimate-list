@@ -58,9 +58,6 @@ local function ReactStateRenderer<T>(props: {
 
 		children[getKey(item, index)] = e("Frame", {
 			BackgroundTransparency = 1,
-			-- Position = props.scrollAxisBinding:map(function(scrollAxis: number)
-			-- 	return adjustPositionToScrollAxis(dimensionsRect.position, scrollAxis, props.direction)
-			-- end),
 			Position = joinAndMapBindings(function(scrollAxis: number, scrollLock: ScrollLock<T>?)
 				if scrollLock ~= nil and scrollLock.lockedTo == items then
 					return adjustPositionToScrollAxis(dimensionsRect.position, scrollLock.scrollAxis, props.direction)
