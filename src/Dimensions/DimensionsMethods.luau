@@ -11,6 +11,7 @@ local DimensionsMethods = {}
 function DimensionsMethods.getCanvasSize<T>(
 	dimensions: Dimensions.Dimensions<T>,
 	dataSource: DataSources.DataSource<T>,
+	windowSize: Vector2,
 	direction: "x" | "y"
 ): UDim2
 	local back = DataSourceMethods.back(dataSource)
@@ -18,7 +19,8 @@ function DimensionsMethods.getCanvasSize<T>(
 		return UDim2.new()
 	end
 
-	local udimRect = DimensionsMethods.getUDimRect(dimensions, back, DataSourceMethods.length(dataSource), direction)
+	local udimRect =
+		DimensionsMethods.getUDimRect(dimensions, back, DataSourceMethods.length(dataSource), windowSize, direction)
 	return if direction == "x"
 		then UDim2.fromOffset(udimRect.position.X.Offset + udimRect.size.X.Offset, 0)
 		elseif direction == "y" then UDim2.fromOffset(0, udimRect.position.Y.Offset + udimRect.size.Y.Offset)
@@ -45,23 +47,54 @@ local function getPositionForConsistentSize(size: number, index: number, directi
 	end
 end
 
-local function getPositionForConsistentUDim2(udim2: UDim2, index: number, direction: "x" | "y"): UDim2
+local function getPositionForConsistentUDim2(
+	udim2: UDim2,
+	index: number,
+	windowSize: Vector2,
+	direction: "x" | "y"
+): UDim2
+	local amountPerNonDominant = DimensionsMethods.getAmountPerNonDominantInGrid(udim2, windowSize, direction)
+
 	if direction == "x" then
-		local amountPerColumn = 1 // udim2.Y.Scale
 		return UDim2.new(
 			0,
-			(math.ceil(index / amountPerColumn) - 1) * udim2.X.Offset,
-			udim2.Y.Scale * ((index - 1) % amountPerColumn),
-			0
+			(math.ceil(index / amountPerNonDominant) - 1) * udim2.X.Offset,
+			udim2.Y.Scale * ((index - 1) % amountPerNonDominant),
+			udim2.Y.Offset * ((index - 1) % amountPerNonDominant)
 		)
 	elseif direction == "y" then
-		local amountPerRow = 1 // udim2.X.Scale
 		return UDim2.new(
-			udim2.X.Scale * ((index - 1) % amountPerRow),
+			udim2.X.Scale * ((index - 1) % amountPerNonDominant),
+			udim2.X.Offset * ((index - 1) % amountPerNonDominant),
 			0,
-			0,
-			(math.ceil(index / amountPerRow) - 1) * udim2.Y.Offset
+			(math.ceil(index / amountPerNonDominant) - 1) * udim2.Y.Offset
 		)
+	else
+		return exhaustiveMatch(direction)
+	end
+end
+
+-- If direction == x: the number of rows per column.
+-- If direction == y: the number of columsn per row.
+function DimensionsMethods.getAmountPerNonDominantInGrid(
+	udim2: UDim2,
+	windowSize: Vector2,
+	direction: "x" | "y"
+): number
+	if direction == "x" then
+		return windowSize.Y // (udim2.Y.Offset + udim2.Y.Scale * windowSize.Y)
+	elseif direction == "y" then
+		return windowSize.X // (udim2.X.Offset + udim2.X.Scale * windowSize.X)
+	else
+		return exhaustiveMatch(direction)
+	end
+end
+
+function DimensionsMethods.getDominantAxis(vector: Vector2, direction: "x" | "y"): number
+	if direction == "x" then
+		return vector.X
+	elseif direction == "y" then
+		return vector.Y
 	else
 		return exhaustiveMatch(direction)
 	end
@@ -71,6 +104,7 @@ function DimensionsMethods.getUDimRect<T>(
 	dimensions: Dimensions.Dimensions<T>,
 	item: T,
 	index: number,
+	windowSize: Vector2,
 	direction: "x" | "y"
 ): Dimensions.UDimRect
 	if dimensions.type == "consistentSize" then
@@ -81,7 +115,7 @@ function DimensionsMethods.getUDimRect<T>(
 	elseif dimensions.type == "consistentUDim2" then
 		return {
 			size = dimensions.udim2,
-			position = getPositionForConsistentUDim2(dimensions.udim2, index, direction),
+			position = getPositionForConsistentUDim2(dimensions.udim2, index, windowSize, direction),
 		}
 	elseif dimensions.type == "getter" then
 		return dimensions.callback(item, index)
@@ -101,6 +135,7 @@ function DimensionsMethods.getUDimRect<T>(
 							if direction == "y" then dimensions.spacing else 0
 						),
 					index,
+					windowSize,
 					direction
 				),
 			}
@@ -114,15 +149,14 @@ function DimensionsMethods.getUDimRect<T>(
 	end
 end
 
-local function getElementsDisplayedForUDim2(udim2: UDim2, windowAxis: number, direction: "x" | "y"): number
+local function getElementsDisplayedForUDim2(udim2: UDim2, windowSize: Vector2, direction: "x" | "y"): number
+	local amountPerNonDominant = DimensionsMethods.getAmountPerNonDominantInGrid(udim2, windowSize, direction)
 	if direction == "x" then
-		local amountPerColumn = 1 // udim2.X.Scale
-		local columns = windowAxis // udim2.Y.Offset + 2
-		return amountPerColumn * columns
+		local columns = windowSize.X // udim2.Y.Offset + 2
+		return amountPerNonDominant * columns
 	elseif direction == "y" then
-		local amountPerRow = 1 // udim2.Y.Scale
-		local rows = windowAxis // udim2.X.Offset + 2
-		return amountPerRow * rows
+		local rows = windowSize.Y // udim2.X.Offset + 2
+		return amountPerNonDominant * rows
 	else
 		return exhaustiveMatch(direction)
 	end
@@ -130,19 +164,21 @@ end
 
 function DimensionsMethods.elementsDisplayedHint<T>(
 	dimensions: Dimensions.Dimensions<T>,
-	windowAxis: number,
+	windowSize: Vector2,
 	direction: "x" | "y"
 ): number?
 	-- Uses of +2 are for supporting top and bottom clipped off
 	if dimensions.type == "consistentSize" then
-		return windowAxis // dimensions.size + 2
+		return DimensionsMethods.getDominantAxis(windowSize, direction) // dimensions.size + 2
 	elseif dimensions.type == "consistentUDim2" then
-		return getElementsDisplayedForUDim2(dimensions.udim2, windowAxis, direction)
+		return getElementsDisplayedForUDim2(dimensions.udim2, windowSize, direction)
 	elseif dimensions.type == "getter" then
 		return nil
 	elseif dimensions.type == "spaced" then
 		if dimensions.inner.type == "consistentSize" then
-			return windowAxis // (dimensions.inner.size + dimensions.spacing) + 2
+			return DimensionsMethods.getDominantAxis(windowSize, direction)
+					// (dimensions.inner.size + dimensions.spacing)
+				+ 2
 		elseif dimensions.inner.type == "consistentUDim2" then
 			return getElementsDisplayedForUDim2(
 				dimensions.inner.udim2
@@ -150,7 +186,7 @@ function DimensionsMethods.elementsDisplayedHint<T>(
 						if direction == "x" then dimensions.spacing else 0,
 						if direction == "y" then dimensions.spacing else 0
 					),
-				windowAxis,
+				windowSize,
 				direction
 			)
 		elseif dimensions.inner.type == "spaced" or dimensions.inner.type == "getter" then

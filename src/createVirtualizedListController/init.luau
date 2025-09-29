@@ -13,8 +13,8 @@ local log = createDebugLogger("createVirtualizedListController")
 export type VirtualizedListController<T> = {
 	setScrollAxis: (scrollAxis: number) -> (),
 
-	setWindowAxis: (windowAxis: number) -> (),
-	getWindowAxis: () -> number,
+	setWindowSize: (windowSize: Vector2) -> (),
+	getWindowSize: () -> Vector2,
 
 	setDataSource: (DataSources.DataSource<T>) -> (),
 	setDimensions: (Dimensions.Dimensions<T>) -> (),
@@ -32,6 +32,7 @@ export type VirtualizedListController<T> = {
 type CurrentView<T> = {
 	range: Vector3,
 	canvasSize: UDim2,
+	windowSize: Vector2,
 	lastDimensions: Dimensions.Dimensions<T>,
 	cachedLastResult: { T },
 	offsetBoundaries: Vector3?,
@@ -46,6 +47,7 @@ local function createVirtualizedListController<T>(
 	local currentView: CurrentView<T> = {
 		range = Vector3.new(),
 		canvasSize = UDim2.new(),
+		windowSize = Vector2.new(),
 		lastDimensions = dimensions,
 		scrollSizeAxis = 0,
 		cachedLastResult = {},
@@ -53,7 +55,9 @@ local function createVirtualizedListController<T>(
 	}
 
 	local scrollAxis = 0
+
 	local windowAxis = 0
+	local windowSize = Vector2.new()
 
 	local function getIndexRangeInViewForSize(size: number): Vector3
 		local head = 1 + scrollAxis // size
@@ -65,20 +69,24 @@ local function createVirtualizedListController<T>(
 	local function getIndexRangeInViewForUDim2(udim2: UDim2): Vector3
 		-- Amount per row if we're Y direction,
 		-- amount per column if we're X.
-		local amountPerNonDominant = if direction == "x"
-			then 1 // udim2.Y.Scale
-			elseif direction == "y" then 1 // udim2.X.Scale
-			else exhaustiveMatch(direction)
+		local amountPerNonDominant = DimensionsMethods.getAmountPerNonDominantInGrid(udim2, windowSize, direction)
 
 		local dominantSize = if direction == "x"
 			then udim2.X.Offset
 			elseif direction == "y" then udim2.Y.Offset
 			else exhaustiveMatch(direction)
 
-		log("getIndexRangeInView: amountPerDominant = %d, dominantSize = %d", amountPerNonDominant, dominantSize)
-
 		local head = 1 + ((scrollAxis // dominantSize) * amountPerNonDominant)
 		local tail = (1 + ((scrollAxis + windowAxis) // dominantSize)) * amountPerNonDominant
+
+		log(
+			"getIndexRangeInView: amountPerNonDominant = %d, scrollAxis = %d, dominantSize = %d. Going from %d to %d",
+			amountPerNonDominant,
+			scrollAxis,
+			dominantSize,
+			head,
+			tail
+		)
 
 		return Vector3.new(head, tail)
 	end
@@ -130,6 +138,7 @@ local function createVirtualizedListController<T>(
 			currentView.offsetBoundaries ~= nil
 			and currentView.offsetBoundaries.X <= scrollAxis
 			and currentView.offsetBoundaries.Y >= windowAxis + scrollAxis
+			and currentView.windowSize == windowSize
 			and currentView.dataSourceLength == length
 			and currentView.lastDimensions == dimensions
 		then
@@ -145,6 +154,7 @@ local function createVirtualizedListController<T>(
 			currentView = {
 				range = newIndexRange,
 				canvasSize = UDim2.new(),
+				windowSize = windowSize,
 				lastDimensions = dimensions,
 				cachedLastResult = {},
 				offsetBoundaries = Vector3.new(scrollAxis, windowAxis + scrollAxis),
@@ -156,8 +166,10 @@ local function createVirtualizedListController<T>(
 			return
 		end
 
-		local topDimensions = DimensionsMethods.getUDimRect(dimensions, items[1], newIndexRange.X, direction)
-		local bottomDimensions = DimensionsMethods.getUDimRect(dimensions, items[#items], newIndexRange.Y, direction)
+		local topDimensions =
+			DimensionsMethods.getUDimRect(dimensions, items[1], newIndexRange.X, windowSize, direction)
+		local bottomDimensions =
+			DimensionsMethods.getUDimRect(dimensions, items[#items], newIndexRange.Y, windowSize, direction)
 
 		log(
 			"View changed: %d..%d (scroll axis: %d, window axis: %d, offset boundaries: %* - %*)",
@@ -171,7 +183,8 @@ local function createVirtualizedListController<T>(
 
 		currentView = {
 			range = newIndexRange,
-			canvasSize = DimensionsMethods.getCanvasSize(dimensions, dataSource, direction),
+			canvasSize = DimensionsMethods.getCanvasSize(dimensions, dataSource, windowSize, direction),
+			windowSize = windowSize,
 			lastDimensions = dimensions,
 			cachedLastResult = items,
 			offsetBoundaries = Vector3.new(
@@ -196,15 +209,6 @@ local function createVirtualizedListController<T>(
 		update()
 	end
 
-	local function setWindowAxis(newWindowAxis: number)
-		windowAxis = newWindowAxis
-		update()
-	end
-
-	local function getWindowAxis(): number
-		return windowAxis
-	end
-
 	local function setDataSource(newDataSource: DataSources.DataSource<T>)
 		assert(dataSource.type == newDataSource.type, "Data source type changed, you must keep it the same")
 
@@ -223,6 +227,21 @@ local function createVirtualizedListController<T>(
 
 		dimensions = newDimensions
 		update()
+	end
+
+	local function setWindowSize(newWindowSize: Vector2)
+		if windowSize == newWindowSize then
+			return
+		end
+
+		windowSize = newWindowSize
+		windowAxis = DimensionsMethods.getDominantAxis(newWindowSize, direction)
+
+		update()
+	end
+
+	local function getWindowSize(): Vector2
+		return windowSize
 	end
 
 	local function get(): { T }
@@ -259,8 +278,8 @@ local function createVirtualizedListController<T>(
 		setDataSource = setDataSource,
 		setDimensions = setDimensions,
 
-		setWindowAxis = setWindowAxis,
-		getWindowAxis = getWindowAxis,
+		setWindowSize = setWindowSize,
+		getWindowSize = getWindowSize,
 
 		get = get,
 		getCanvasSize = getCanvasSize,

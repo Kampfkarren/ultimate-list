@@ -50,7 +50,7 @@ local function ReactBindingsRenderer<T>(props: {
 
 			local countHint = DimensionsMethods.elementsDisplayedHint(
 				props.dimensions,
-				props.virtualizedListController.getWindowAxis(),
+				props.virtualizedListController.getWindowSize(),
 				props.direction
 			)
 			if countHint == nil then
@@ -208,6 +208,7 @@ local function ReactBindingsRenderer<T>(props: {
 				props.dimensions,
 				locatedItem.contents.value,
 				locatedItem.contents.index,
+				props.virtualizedListController.getWindowSize(),
 				props.direction
 			)
 		end)

@@ -53,12 +53,7 @@ local function ScrollingFrame<T>(
 
 	local onAbsoluteWindowSizeChanged = React.useCallback(function(instance: ScrollingFrame)
 		setWindowSize(instance.AbsoluteWindowSize)
-		virtualizedListController.setWindowAxis(
-			if props.direction == "x"
-				then instance.AbsoluteWindowSize.X
-				elseif props.direction == "y" then instance.AbsoluteWindowSize.Y
-				else exhaustiveMatch(props.direction)
-		)
+		virtualizedListController.setWindowSize(instance.AbsoluteWindowSize)
 
 		if props.onAbsoluteWindowSizeChanged ~= nil then
 			props.onAbsoluteWindowSizeChanged(instance.AbsoluteWindowSize)

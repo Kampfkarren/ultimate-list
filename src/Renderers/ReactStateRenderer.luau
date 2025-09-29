@@ -54,7 +54,13 @@ local function ReactStateRenderer<T>(props: {
 	for relativeIndex, item in items do
 		local index = range.X + (relativeIndex - 1)
 
-		local dimensionsRect = DimensionsMethods.getUDimRect(props.dimensions, item, index, props.direction)
+		local dimensionsRect = DimensionsMethods.getUDimRect(
+			props.dimensions,
+			item,
+			index,
+			props.virtualizedListController.getWindowSize(),
+			props.direction
+		)
 
 		children[getKey(item, index)] = e("Frame", {
 			BackgroundTransparency = 1,
