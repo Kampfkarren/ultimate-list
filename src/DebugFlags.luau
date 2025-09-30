@@ -1,5 +1,5 @@
 local DebugFlags = {}
 
-DebugFlags.shouldLog = true
+DebugFlags.shouldLog = false
 
 return DebugFlags
