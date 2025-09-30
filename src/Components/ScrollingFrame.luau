@@ -1,5 +1,5 @@
 local RunService = game:GetService("RunService")
-local Src = script:FindFirstAncestor("UltimateList")
+local Src = script:FindFirstAncestor("ultimate-list")
 
 local DataSources = require(Src.DataSources)
 local Dimensions = require(Src.Dimensions)

@@ -8,7 +8,7 @@
 		"ReplicatedStorage": {
 			"Packages": {
 				"$path": "Packages",
-				"UltimateList": {
+				"ultimate-list": {
 					"$path": "src"
 				}
 			},

@@ -1,5 +1,5 @@
 -- TODO: Throughout this, assert that UDims are what is expected (scale only on opposite direction)
-local Src = script:FindFirstAncestor("UltimateList")
+local Src = script:FindFirstAncestor("ultimate-list")
 
 local DataSourceMethods = require(Src.DataSources.DataSourceMethods)
 local DataSources = require(Src.DataSources)

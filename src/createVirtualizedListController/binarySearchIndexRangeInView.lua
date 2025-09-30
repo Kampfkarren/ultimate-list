@@ -1,4 +1,4 @@
-local Src = script:FindFirstAncestor("UltimateList")
+local Src = script:FindFirstAncestor("ultimate-list")
 
 local DataSourceMethods = require(Src.DataSources.DataSourceMethods)
 local DataSources = require(Src.DataSources)

@@ -1,4 +1,4 @@
-local Src = script:FindFirstAncestor("UltimateList")
+local Src = script:FindFirstAncestor("ultimate-list")
 
 local exhaustiveMatch = require(Src.Util.exhaustiveMatch)
 

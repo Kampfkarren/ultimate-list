@@ -1,6 +1,6 @@
 -- Intentionally using string formatting instead of taking strings directly to avoid
 -- expensive string formatting in production.
-local Src = script:FindFirstAncestor("UltimateList")
+local Src = script:FindFirstAncestor("ultimate-list")
 
 local DebugFlags = require(Src.DebugFlags)
 
