@@ -3,7 +3,7 @@ local StylingService = game:GetService("StylingService")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactRoblox = require(ReplicatedStorage.DevPackages.ReactRoblox)
-local UltimateList = require(ReplicatedStorage.Packages.UltimateList)
+local UltimateList = require(ReplicatedStorage.Packages["ultimate-list"])
 
 local e = React.createElement
 
