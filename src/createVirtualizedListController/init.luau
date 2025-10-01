@@ -36,7 +36,7 @@ type CurrentView<T> = {
 	lastDimensions: Dimensions.Dimensions<T>,
 	cachedLastResult: { T },
 	offsetBoundaries: Vector3?,
-	dataSourceLength: number,
+	dataSource: DataSources.DataSource<T>,
 }
 
 local function createVirtualizedListController<T>(
@@ -51,7 +51,7 @@ local function createVirtualizedListController<T>(
 		lastDimensions = dimensions,
 		scrollSizeAxis = 0,
 		cachedLastResult = {},
-		dataSourceLength = 0,
+		dataSource = dataSource,
 	}
 
 	local scrollAxis = 0
@@ -131,15 +131,16 @@ local function createVirtualizedListController<T>(
 	end
 
 	local function update()
-		local length = DataSourceMethods.length(dataSource)
-
 		-- Only re-check if we actually will see anything new
 		if
 			currentView.offsetBoundaries ~= nil
 			and currentView.offsetBoundaries.X <= scrollAxis
 			and currentView.offsetBoundaries.Y >= windowAxis + scrollAxis
 			and currentView.windowSize == windowSize
-			and currentView.dataSourceLength == length
+			-- TODO: If append only, just check length, though make sure
+			-- that it still works if the window hasn't been tall enough to
+			-- scroll yet (I'm not sure if offsetBoundaries will work)
+			and currentView.dataSource == dataSource
 			and currentView.lastDimensions == dimensions
 		then
 			return
@@ -158,7 +159,7 @@ local function createVirtualizedListController<T>(
 				lastDimensions = dimensions,
 				cachedLastResult = {},
 				offsetBoundaries = Vector3.new(scrollAxis, windowAxis + scrollAxis),
-				dataSourceLength = length,
+				dataSource = dataSource,
 			}
 
 			callUpdateCallbacks()
@@ -198,7 +199,7 @@ local function createVirtualizedListController<T>(
 					elseif direction == "y" then bottomDimensions.position.Y.Offset + bottomDimensions.size.Y.Offset
 					else exhaustiveMatch(direction)
 			),
-			dataSourceLength = length,
+			dataSource = dataSource,
 		}
 
 		callUpdateCallbacks()
