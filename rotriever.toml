@@ -3,7 +3,6 @@ name = "UltimateList"
 version = "0.2.4"
 files = [
     "src/**",
-    "default.project.json",
     "!*.spec.lua",
     "!*.story.lua",
 ]
