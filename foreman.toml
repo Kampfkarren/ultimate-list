@@ -1,0 +1,2 @@
+[tools]
+rotrieve = { source = "Roblox/rotriever", version = "=0.5.13-alpha.5" }
