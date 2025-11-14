@@ -1,0 +1,11 @@
+[package]
+name = "ultimate-list"
+version = "0.2.4"
+content_root = "src"
+publish = true
+
+[config]
+registry_index = true
+
+[dependencies]
+React = "github.com/roblox/roact-alignment@^17.3.7"
