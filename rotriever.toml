@@ -1,11 +1,7 @@
 [package]
 name = "UltimateList"
 version = "0.2.4"
-files = [
-    "src/**",
-    "!*.spec.lua",
-    "!*.story.lua",
-]
+content_root = "src"
 publish = true
 
 [config]
