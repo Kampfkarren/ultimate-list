@@ -1,5 +1,5 @@
 [package]
-name = "UltimateList"
+name = "ultimate-list"
 version = "0.2.4"
 content_root = "src"
 publish = true
