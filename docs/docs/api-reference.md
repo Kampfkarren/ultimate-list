@@ -115,13 +115,19 @@ The set of [renderers](./core-concepts/renderers) that dictate how an item turns
 ### `byState`
 ```ts
 Renderers.byState<T>(
-    callback: (T) -> React.Node
+    callback: (T) -> React.Node,
+    config: {
+        freezeViewWhileScrolling: boolean?,
+    }?
 ): Renderer<T>
 ```
 
 Takes a callback that turns a direct value into a React node. When the user scrolls, we will trigger a re-render and call that callback again. When an item is no longer visible, it is unmounted--elements are not reused for different items.
 
 See also ["State" section on the renderers documentation](./core-concepts/renderers#state).
+
+The optional configuration table allows you to customize the behavior of the rendering.
+- `freezeViewWhileScrolling: boolean` (Default: `true`) - Internally, the state renderer does not actually place its contents inside the ScrollingFrame--it places them in an overlay view that moves alongside the scrolling. When this option is enabled, that view will only move once everything completes rendering, leading to the contents always looking how you expect. However, this may cause visible lag if the components are expensive to render. Disabling this will make the scrolling smoother, but will allow for empty space to show up while React renders your UI.
 
 ### `byBinding`
 ```ts

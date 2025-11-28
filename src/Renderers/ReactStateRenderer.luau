@@ -3,6 +3,7 @@ local Src = script:FindFirstAncestor("ultimate-list")
 local Dimensions = require(Src.Dimensions)
 local DimensionsMethods = require(Src.Dimensions.DimensionsMethods)
 local React = require(Src.Parent.React)
+local Renderers = require(Src.Renderers)
 local adjustPositionToScrollAxis = require(Src.Dimensions.adjustPositionToScrollAxis)
 local createVirtualizedListController = require(Src.createVirtualizedListController)
 local joinAndMapBindings = require(Src.Util.joinAndMapBindings)
@@ -21,6 +22,8 @@ type ScrollLock<T> = {
 
 local function ReactStateRenderer<T>(props: {
 	virtualizedListController: createVirtualizedListController.VirtualizedListController<T>,
+
+	config: Renderers.StateRendererConfig,
 
 	dimensions: Dimensions.Dimensions<T>,
 	direction: "x" | "y",
@@ -65,7 +68,11 @@ local function ReactStateRenderer<T>(props: {
 		children[getKey(item, index)] = e("Frame", {
 			BackgroundTransparency = 1,
 			Position = joinAndMapBindings(function(scrollAxis: number, scrollLock: ScrollLock<T>?)
-				if scrollLock ~= nil and scrollLock.lockedTo == items then
+				if
+					props.config.freezeViewWhileScrolling ~= false
+					and scrollLock ~= nil
+					and scrollLock.lockedTo == items
+				then
 					return adjustPositionToScrollAxis(dimensionsRect.position, scrollLock.scrollAxis, props.direction)
 				else
 					return adjustPositionToScrollAxis(dimensionsRect.position, scrollAxis, props.direction)

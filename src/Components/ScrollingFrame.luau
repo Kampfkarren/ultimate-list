@@ -129,13 +129,16 @@ local function ScrollingFrame<T>(
 			Renderer = if props.renderer.type == "byState"
 				then e(ReactStateRenderer, {
 					virtualizedListController = virtualizedListController,
-					scrollAxisBinding = scrollAxisBinding,
+
+					config = props.renderer.config,
 
 					dimensions = props.dimensions,
 					direction = props.direction,
 
 					callback = props.renderer.callback,
 					getKey = props.getKey,
+
+					scrollAxisBinding = scrollAxisBinding,
 				})
 				elseif props.renderer.type == "byBinding" then e(ReactBindingsRenderer, {
 					virtualizedListController = virtualizedListController,

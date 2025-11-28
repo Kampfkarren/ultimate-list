@@ -1,6 +1,6 @@
 [package]
 name = "kampfkarren/ultimate-list"
-version = "0.2.4"
+version = "0.3.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 exclude = ["*"]

@@ -12,6 +12,7 @@ export type DataSourceCursor<T> = DataSources.DataSourceCursor<T>
 export type MutableDataSourceMethods<T> = DataSources.MutableDataSourceMethods<T>
 
 export type Renderer<T> = Renderers.Renderer<T>
+export type StateRendererConfig = Renderers.StateRendererConfig
 
 local UltimateList = {}
 
