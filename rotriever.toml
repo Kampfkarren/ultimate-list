@@ -1,6 +1,6 @@
 [package]
 name = "ultimate-list"
-version = "0.3.0"
+version = "0.3.1"
 content_root = "src"
 publish = true
 

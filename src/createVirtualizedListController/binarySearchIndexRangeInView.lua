@@ -40,7 +40,7 @@ local function binarySearchIndexRangeInView<T>(
 	local length = DataSourceMethods.length(dataSource)
 	local high = length
 
-	while low < high do
+	while low <= high do
 		local mid = (low + high) // 2
 
 		local cursor = DataSourceMethods.get(dataSource, mid)
