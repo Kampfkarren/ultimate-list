@@ -209,7 +209,8 @@ local function ReactBindingsRenderer<T>(props: {
 				locatedItem.contents.value,
 				locatedItem.contents.index,
 				props.virtualizedListController.getWindowSize(),
-				props.direction
+				props.direction,
+				props.virtualizedListController.getDimensionsState()
 			)
 		end)
 

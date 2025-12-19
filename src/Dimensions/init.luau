@@ -1,9 +1,16 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local DataSources = require(ReplicatedStorage.Packages["ultimate-list"].DataSources)
 local Dimensions = {}
 
 export type Dimensions<T> =
-	{
+	| {
 		type: "getter",
 		callback: (value: T, index: number) -> UDimRect,
+	}
+	| {
+		type: "accumulatingSize",
+		callback: (value: T, index: number) -> UDim2,
 	}
 	| {
 		type: "consistentSize",
@@ -18,6 +25,45 @@ export type Dimensions<T> =
 		spacing: number,
 		inner: Dimensions<T>,
 	}
+
+export type DimensionsState<T> =
+	{
+		type: "accumulatingSize",
+
+		-- Will include spacing
+		udimRects: { UDimRect },
+
+		-- Sorted list of the height of rows if direction == y, and width of columns if direction == x.
+		-- This exists so that if you have multiple items of different sizes in the same section, the binary
+		-- search behaves as it should.
+		dominantSections: { AccumulatingSizeSection },
+
+		dataSource: DataSources.DataSource<T>,
+		windowSize: Vector2,
+
+		latestNonDominantSizeOffset: number,
+		latestNonDominantSizeScale: number,
+
+		-- If you use scale for the non-dominant axis, we don't need to recalculate anything.
+		-- If you use offset, then the rows/columns can wrap differently.
+		sizeRecalculationStrategy: {
+			needsRecalculation: true,
+			lastWindowSize: Vector2,
+		} | {
+			needsRecalculation: false,
+		},
+	}
+	| {
+		type: "none",
+	}
+
+export type AccumulatingSizeSection = {
+	-- [start index, end index]
+	indexRange: Vector3,
+
+	-- [starting point, end point]
+	box: Vector3,
+}
 
 export type UDimRect = {
 	size: UDim2,

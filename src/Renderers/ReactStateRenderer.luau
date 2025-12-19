@@ -62,7 +62,8 @@ local function ReactStateRenderer<T>(props: {
 			item,
 			index,
 			props.virtualizedListController.getWindowSize(),
-			props.direction
+			props.direction,
+			props.virtualizedListController.getDimensionsState()
 		)
 
 		children[getKey(item, index)] = e("Frame", {

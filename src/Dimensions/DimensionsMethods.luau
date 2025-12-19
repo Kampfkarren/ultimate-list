@@ -12,15 +12,22 @@ function DimensionsMethods.getCanvasSize<T>(
 	dimensions: Dimensions.Dimensions<T>,
 	dataSource: DataSources.DataSource<T>,
 	windowSize: Vector2,
-	direction: "x" | "y"
+	direction: "x" | "y",
+	dimensionsState: Dimensions.DimensionsState<T>
 ): UDim2
 	local back = DataSourceMethods.back(dataSource)
 	if back == nil then
 		return UDim2.new()
 	end
 
-	local udimRect =
-		DimensionsMethods.getUDimRect(dimensions, back, DataSourceMethods.length(dataSource), windowSize, direction)
+	local udimRect = DimensionsMethods.getUDimRect(
+		dimensions,
+		back,
+		DataSourceMethods.length(dataSource),
+		windowSize,
+		direction,
+		dimensionsState
+	)
 	return if direction == "x"
 		then UDim2.fromOffset(udimRect.position.X.Offset + udimRect.size.X.Offset, 0)
 		elseif direction == "y" then UDim2.fromOffset(0, udimRect.position.Y.Offset + udimRect.size.Y.Offset)
@@ -105,7 +112,8 @@ function DimensionsMethods.getUDimRect<T>(
 	item: T,
 	index: number,
 	windowSize: Vector2,
-	direction: "x" | "y"
+	direction: "x" | "y",
+	dimensionsState: Dimensions.DimensionsState<T>
 ): Dimensions.UDimRect
 	if dimensions.type == "consistentSize" then
 		return {
@@ -139,11 +147,19 @@ function DimensionsMethods.getUDimRect<T>(
 					direction
 				),
 			}
+		elseif dimensions.inner.type == "accumulatingSize" then
+			-- We bake it into the state
+			return DimensionsMethods.getUDimRect(dimensions.inner, item, index, windowSize, direction, dimensionsState)
 		elseif dimensions.inner.type == "getter" or dimensions.inner.type == "spaced" then
 			error("Unsupported spaced dimensions")
 		else
 			return exhaustiveMatch(dimensions.inner.type)
 		end
+	elseif dimensions.type == "accumulatingSize" then
+		assert(dimensionsState.type == "accumulatingSize", "Dimensions state should be accumulatingSize")
+		local udimRect = dimensionsState.udimRects[index]
+		assert(udimRect ~= nil, "Couldn't find udimRect of index for accumulating size item")
+		return udimRect
 	else
 		return exhaustiveMatch(dimensions.type)
 	end
@@ -172,7 +188,7 @@ function DimensionsMethods.elementsDisplayedHint<T>(
 		return DimensionsMethods.getDominantAxis(windowSize, direction) // dimensions.size + 2
 	elseif dimensions.type == "consistentUDim2" then
 		return getElementsDisplayedForUDim2(dimensions.udim2, windowSize, direction)
-	elseif dimensions.type == "getter" then
+	elseif dimensions.type == "getter" or dimensions.type == "accumulatingSize" then
 		return nil
 	elseif dimensions.type == "spaced" then
 		if dimensions.inner.type == "consistentSize" then
@@ -189,6 +205,8 @@ function DimensionsMethods.elementsDisplayedHint<T>(
 				windowSize,
 				direction
 			)
+		elseif dimensions.inner.type == "accumulatingSize" then
+			return nil
 		elseif dimensions.inner.type == "spaced" or dimensions.inner.type == "getter" then
 			error("Unsupported spaced dimensions")
 		else
@@ -207,6 +225,9 @@ function DimensionsMethods.equals<T>(left: Dimensions.Dimensions<T>, right: Dime
 
 	if left.type == "getter" then
 		assert(right.type == "getter", "Luau")
+		return left.callback == right.callback
+	elseif left.type == "accumulatingSize" then
+		assert(right.type == "accumulatingSize", "Luau")
 		return left.callback == right.callback
 	elseif left.type == "consistentSize" then
 		assert(right.type == "consistentSize", "Luau")

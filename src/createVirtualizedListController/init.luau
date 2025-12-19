@@ -4,8 +4,10 @@ local DataSourceMethods = require(Src.DataSources.DataSourceMethods)
 local DataSources = require(Src.DataSources)
 local Dimensions = require(Src.Dimensions)
 local DimensionsMethods = require(Src.Dimensions.DimensionsMethods)
+local binarySearchAccumulatingSizeSections = require(script.binarySearchAccumulatingSizeSections)
 local binarySearchIndexRangeInView = require(script.binarySearchIndexRangeInView)
 local createDebugLogger = require(Src.Util.createDebugLogger)
+local createDimensionsStateGetter = require(script.createDimensionsStateGetter)
 local exhaustiveMatch = require(Src.Util.exhaustiveMatch)
 
 local log = createDebugLogger("createVirtualizedListController")
@@ -22,6 +24,7 @@ export type VirtualizedListController<T> = {
 	-- If the view has not changed, will return the identical last result
 	get: () -> { T },
 	getCanvasSize: () -> UDim2,
+	getDimensionsState: () -> Dimensions.DimensionsState<T>,
 	getRange: () -> Vector3,
 
 	bindToUpdate: (callback: () -> ()) -> () -> (),
@@ -34,6 +37,7 @@ type CurrentView<T> = {
 	canvasSize: UDim2,
 	windowSize: Vector2,
 	lastDimensions: Dimensions.Dimensions<T>,
+	dimensionsState: Dimensions.DimensionsState<T>,
 	cachedLastResult: { T },
 	offsetBoundaries: Vector3?,
 	dataSource: DataSources.DataSource<T>,
@@ -44,11 +48,14 @@ local function createVirtualizedListController<T>(
 	dimensions: Dimensions.Dimensions<T>,
 	direction: "x" | "y"
 ): VirtualizedListController<T>
+	local getNewDimensionsState = createDimensionsStateGetter()
+
 	local currentView: CurrentView<T> = {
 		range = Vector3.new(),
 		canvasSize = UDim2.new(),
 		windowSize = Vector2.new(),
 		lastDimensions = dimensions,
+		dimensionsState = { type = "none" },
 		scrollSizeAxis = 0,
 		cachedLastResult = {},
 		dataSource = dataSource,
@@ -94,13 +101,24 @@ local function createVirtualizedListController<T>(
 	-- consistentUDim2: O(1)
 	-- consistentSize: O(1)
 	-- getter: O(log n) assuming getter is O(1)
-	local function getIndexRangeInView(): Vector3
+	local function getIndexRangeInView<T>(): Vector3
 		if dimensions.type == "consistentUDim2" then
 			return getIndexRangeInViewForUDim2(dimensions.udim2)
 		elseif dimensions.type == "consistentSize" then
 			return getIndexRangeInViewForSize(dimensions.size)
 		elseif dimensions.type == "getter" then
 			return binarySearchIndexRangeInView(dataSource, dimensions.callback, scrollAxis, windowAxis, direction)
+		elseif
+			dimensions.type == "accumulatingSize"
+			-- Spacing is calculated within the state
+			or (dimensions.type == "spaced" and dimensions.inner.type == "accumulatingSize")
+		then
+			assert(currentView.dimensionsState.type == "accumulatingSize", "Dimensions state is not accumulatingSize")
+			return binarySearchAccumulatingSizeSections(
+				currentView.dimensionsState.dominantSections,
+				scrollAxis,
+				windowAxis
+			)
 		elseif dimensions.type == "spaced" then
 			if dimensions.inner.type == "consistentSize" then
 				return getIndexRangeInViewForSize(dimensions.inner.size + dimensions.spacing)
@@ -146,6 +164,8 @@ local function createVirtualizedListController<T>(
 			return
 		end
 
+		currentView.dimensionsState = getNewDimensionsState(dimensions, dataSource, windowSize, direction)
+
 		local newIndexRange = getIndexRangeInView()
 		local items = DataSourceMethods.getByRange(dataSource, newIndexRange)
 
@@ -157,6 +177,7 @@ local function createVirtualizedListController<T>(
 				canvasSize = UDim2.new(),
 				windowSize = windowSize,
 				lastDimensions = dimensions,
+				dimensionsState = currentView.dimensionsState,
 				cachedLastResult = {},
 				offsetBoundaries = Vector3.new(scrollAxis, windowAxis + scrollAxis),
 				dataSource = dataSource,
@@ -167,10 +188,23 @@ local function createVirtualizedListController<T>(
 			return
 		end
 
-		local topDimensions =
-			DimensionsMethods.getUDimRect(dimensions, items[1], newIndexRange.X, windowSize, direction)
-		local bottomDimensions =
-			DimensionsMethods.getUDimRect(dimensions, items[#items], newIndexRange.Y, windowSize, direction)
+		local topDimensions = DimensionsMethods.getUDimRect(
+			dimensions,
+			items[1],
+			newIndexRange.X,
+			windowSize,
+			direction,
+			currentView.dimensionsState
+		)
+
+		local bottomDimensions = DimensionsMethods.getUDimRect(
+			dimensions,
+			items[#items],
+			newIndexRange.Y,
+			windowSize,
+			direction,
+			currentView.dimensionsState
+		)
 
 		log(
 			"View changed: %d..%d (scroll axis: %d, window axis: %d, offset boundaries: %* - %*)",
@@ -184,9 +218,16 @@ local function createVirtualizedListController<T>(
 
 		currentView = {
 			range = newIndexRange,
-			canvasSize = DimensionsMethods.getCanvasSize(dimensions, dataSource, windowSize, direction),
+			canvasSize = DimensionsMethods.getCanvasSize(
+				dimensions,
+				dataSource,
+				windowSize,
+				direction,
+				currentView.dimensionsState
+			),
 			windowSize = windowSize,
 			lastDimensions = dimensions,
+			dimensionsState = currentView.dimensionsState,
 			cachedLastResult = items,
 			offsetBoundaries = Vector3.new(
 				if direction == "x"
@@ -253,6 +294,10 @@ local function createVirtualizedListController<T>(
 		return currentView.canvasSize
 	end
 
+	local function getDimensionsState(): Dimensions.DimensionsState<T>
+		return currentView.dimensionsState
+	end
+
 	local function getRange(): Vector3
 		return currentView.range
 	end
@@ -284,6 +329,7 @@ local function createVirtualizedListController<T>(
 
 		get = get,
 		getCanvasSize = getCanvasSize,
+		getDimensionsState = getDimensionsState,
 		getRange = getRange,
 
 		bindToUpdate = bindToUpdate,
