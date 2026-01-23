@@ -5,7 +5,7 @@ local ReactRoblox = require(ReplicatedStorage.DevPackages.ReactRoblox)
 local UltimateList = require(ReplicatedStorage.Packages["ultimate-list"])
 
 local controls = {
-	elements = 2,
+	elements = 100,
 	vertical = true,
 
 	dominantSize = 50,
