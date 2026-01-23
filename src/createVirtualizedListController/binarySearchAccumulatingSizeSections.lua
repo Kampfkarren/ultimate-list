@@ -8,6 +8,11 @@ local function binarySearchAccumulatingSizeSections<T>(
 	scrollAxis: number,
 	windowAxis: number
 ): Vector3
+	-- todo soon
+	if true then
+		return Vector3.new(1, sections[#sections].indexRange.Y)
+	end
+
 	local low, high = 1, #sections
 
 	while low <= high do

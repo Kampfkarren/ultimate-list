@@ -91,6 +91,13 @@ function Dimensions.consistentUDim2<T>(udim2: UDim2): Dimensions<T>
 	}
 end
 
+function Dimensions.accumulatingSize<T>(callback: (value: T, index: number) -> UDim2): Dimensions<T>
+	return {
+		type = "accumulatingSize",
+		callback = callback,
+	}
+end
+
 function Dimensions.withSpacing<T>(inner: Dimensions<T>, spacing: number): Dimensions<T>
 	assert(
 		inner.type ~= "getter",

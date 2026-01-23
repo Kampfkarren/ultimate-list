@@ -46,7 +46,7 @@ local function createFreshAccumulatingSizeState<T>(
 			then size.Y.Scale * windowSize.Y + size.Y.Offset
 			else size.X.Scale * windowSize.X + size.X.Offset
 
-		local firstInSection = latestNonDominantSizeOffset ~= 0 or latestNonDominantSizeScale ~= 0
+		local firstInSection = latestNonDominantSizeOffset == 0 and latestNonDominantSizeScale == 0
 
 		if
 			not firstInSection
@@ -59,7 +59,18 @@ local function createFreshAccumulatingSizeState<T>(
 				>= maxNonDominantSize
 		then
 			firstInSection = true
-			error("todo soon: create fresh section")
+
+			table.insert(dominantSections, {
+				indexRange = Vector3.new(startIndex, math.max(startIndex, index - 1)),
+				box = Vector3.new(totalDominantSize, totalDominantSize + largestDominantInSection),
+			})
+
+			totalDominantSize += largestDominantInSection
+			largestDominantInSection = 0
+			latestNonDominantSizeOffset = 0
+			latestNonDominantSizeScale = 0
+
+			startIndex = index
 		end
 
 		table.insert(udimRects, {
@@ -238,7 +249,7 @@ local function createDimensionsStateGetter<T>(): (
 		end
 
 		lastDimensions = dimensions
-		lastDimensionsState = NONE_STATE
+		lastDimensionsState = nextState
 
 		return nextState
 	end
