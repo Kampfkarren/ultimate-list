@@ -39,11 +39,11 @@ local function Story(props: {
 					props.controls.nonDominantSizeScale,
 					props.controls.nonDominantSizeOffset,
 					0,
-					props.controls.dominantSize
+					props.controls.dominantSize * (value / 3)
 				)
 				else UDim2.new(
 					0,
-					props.controls.dominantSize,
+					props.controls.dominantSize * (value / 3),
 					props.controls.nonDominantSizeScale,
 					props.controls.nonDominantSizeOffset
 				)
