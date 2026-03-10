@@ -6,6 +6,7 @@ publish = true
 
 [config]
 registry_index = true
+allow_kebab_case = true
 
 [dependencies]
 React = "github.com/roblox/roact-alignment@^17.3.7"
