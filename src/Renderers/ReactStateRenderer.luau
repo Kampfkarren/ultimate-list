@@ -37,7 +37,8 @@ local function ReactStateRenderer<T>(props: {
 	local scrollLockBinding, setScrollLock = React.useBinding(nil :: ScrollLock<T>?)
 
 	React.useEffect(function()
-		local lastItems = items
+		local lastItems = props.virtualizedListController.get()
+		setItems(lastItems)
 
 		return props.virtualizedListController.bindToUpdate(function()
 			setScrollLock({
