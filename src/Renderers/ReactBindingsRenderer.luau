@@ -1,36 +1,19 @@
 local Src = script:FindFirstAncestor("ultimate-list")
 
 local Dimensions = require(Src.Dimensions)
-local DimensionsMethods = require(Src.Dimensions.DimensionsMethods)
 local React = require(Src.Parent.React)
-local adjustPositionToScrollAxis = require(Src.Dimensions.adjustPositionToScrollAxis)
 local createDebugLogger = require(Src.Util.createDebugLogger)
+local createInitialSlots = require(script.Parent.createInitialSlots)
+local createSlotElement = require(script.Parent.createSlotElement)
 local createVirtualizedListController = require(Src.createVirtualizedListController)
-local joinAndMapBindings = require(Src.Util.joinAndMapBindings)
+local getKeyDefault = require(Src.Util.getKeyDefault)
 
 local e = React.createElement
 
 local log = createDebugLogger("ReactBindingsRenderer")
 
-local function getKeyDefault<T>(_value: T, index: number): string
-	return tostring(index)
-end
-
-type LocatedItem<T> = {
-	contents: {
-		type: "vacant",
-	} | {
-		type: "full",
-		index: number,
-		key: string,
-		value: T,
-	},
-}
-
-type BindingAndSetter<T> = {
-	binding: React.Binding<T>,
-	set: (T) -> (),
-}
+type LocatedItem<T> = createSlotElement.LocatedItem<T>
+type BindingAndSetter<T> = createInitialSlots.BindingAndSetter<T>
 
 local function ReactBindingsRenderer<T>(props: {
 	virtualizedListController: createVirtualizedListController.VirtualizedListController<T>,
@@ -44,35 +27,14 @@ local function ReactBindingsRenderer<T>(props: {
 })
 	-- NOT in order.
 	-- This is to ensure that elements keep identity even when scrolled.
-	local itemBindingsAndSetters: { BindingAndSetter<LocatedItem<T>> }, setItemBindingsAndSetters = React.useState(
-		function(): { BindingAndSetter<LocatedItem<T>> }
-			local total = {}
-
-			local countHint = DimensionsMethods.elementsDisplayedHint(
-				props.dimensions,
-				props.virtualizedListController.getWindowSize(),
-				props.direction
-			)
-			if countHint == nil then
-				return total
-			end
-
-			for _ = 1, countHint do
-				local binding, setBinding = React.createBinding({
-					contents = {
-						type = "vacant",
-					},
-				} :: LocatedItem<T>)
-
-				table.insert(total, {
-					binding = binding,
-					set = setBinding,
-				})
-			end
-
-			return total
-		end
-	)
+	local itemBindingsAndSetters: { BindingAndSetter<T> }, setItemBindingsAndSetters = React.useState(function()
+		return createInitialSlots(
+			props.dimensions,
+			props.virtualizedListController,
+			props.direction,
+			nil
+		)
+	end)
 
 	local getKey: (value: T, index: number) -> string = props.getKey or getKeyDefault
 
@@ -91,7 +53,7 @@ local function ReactBindingsRenderer<T>(props: {
 
 			local deadSetters = {}
 			local vacantSetters = {}
-			local newBindingsAndSetters: { BindingAndSetter<LocatedItem<T>> } = {}
+			local newBindingsAndSetters: { BindingAndSetter<T> } = {}
 
 			for _, bindingAndSetter in itemBindingsAndSetters do
 				local locatedItem = bindingAndSetter.binding:getValue()
@@ -193,45 +155,18 @@ local function ReactBindingsRenderer<T>(props: {
 
 	local children: { [string]: React.Node } = {}
 	for index, itemBindingAndSetter in itemBindingsAndSetters do
-		-- Luau: Not sure what is going on here
 		local binding: React.Binding<LocatedItem<T>> = itemBindingAndSetter.binding :: any
 
-		local udimRectBinding: React.Binding<Dimensions.UDimRect> = binding:map(function(locatedItem: LocatedItem<T>)
-			if locatedItem.contents.type == "vacant" then
-				return {
-					size = UDim2.new(),
-					position = UDim2.new(),
-				}
-			end
-
-			return DimensionsMethods.getUDimRect(
-				props.dimensions,
-				locatedItem.contents.value,
-				locatedItem.contents.index,
-				props.virtualizedListController.getWindowSize(),
-				props.direction
-			)
-		end)
-
-		children[`Item{index}`] = e("Frame", {
-			BackgroundTransparency = 1,
-
-			Position = joinAndMapBindings(function(udimRect: Dimensions.UDimRect, scrollAxis: number)
-				return adjustPositionToScrollAxis(udimRect.position, scrollAxis, props.direction)
-			end, udimRectBinding, props.scrollAxisBinding),
-
-			Size = udimRectBinding:map(function(udimRect: Dimensions.UDimRect)
-				return udimRect.size
-			end),
-
-			Visible = binding:map(function(locatedItem: LocatedItem<T>)
-				return locatedItem.contents.type == "full"
-			end),
-		}, {
-			Content = props.callback(binding:map(function(locatedItem: LocatedItem<T>)
-				return if locatedItem.contents.type == "full" then locatedItem.contents.value else nil
-			end)),
-		})
+		local key, element = createSlotElement(
+			binding,
+			props.scrollAxisBinding,
+			props.dimensions,
+			props.direction,
+			props.virtualizedListController,
+			props.callback,
+			`Item{index}`
+		)
+		children[key] = element
 	end
 
 	return e(React.Fragment, {}, children)
