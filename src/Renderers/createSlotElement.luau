@@ -24,8 +24,6 @@ export type LocatedItem<T> = {
 		index: number,
 		key: string,
 		value: T,
-		-- Present on typed binding items; absent on plain binding items.
-		itemType: string?,
 	},
 }
 

@@ -140,6 +140,21 @@ Takes a callback that provides a React node based on the provided binding. When 
 
 See also ["Bindings" section on the renderers documentation](./core-concepts/renderers#bindings).
 
+### `byTypedBinding`
+```ts
+Renderers.byTypedBinding<T>(
+    config: TypedBindingRendererConfig<T>
+): Renderer<T>
+```
+
+Creates a binding-based renderer with separate recycling pools per item type. Items are classified by `getItemType`, and each type's slots are recycled independently.
+
+- `config.getItemType: (value: T) -> string`: Returns a string identifying the type of an item.
+- `config.renderers: { [string]: (React.Binding<T?>) -> React.Node }`: A table mapping each type string to a binding callback. Must include an entry for every type that `getItemType` can return.
+- `config.primaryType: string`: The dominant item type. Must be a key in `renderers`. Pre-allocated slots are created with this type for optimal initial rendering. Slots for other types are created on demand as those items enter the viewport.
+
+See also ["Typed Bindings" section on the renderers documentation](./core-concepts/renderers#typed-bindings).
+
 ## Types
 These are the exported types of UltimateList. If you are using Wally, use [`wally-package-types`](https://github.com/JohnnyMorganz/wally-package-types) to get access to them.
 
@@ -151,6 +166,17 @@ Tagged union for a [data source](./core-concepts/data-sources). The contents of 
 
 ### `Renderer<T>`
 Tagged union for a [renderer](./core-concepts/renderers). The contents of this are not considered stable, and you should always use the [Renderers](#renderers) API directly.
+
+### `TypedBindingRendererConfig<T>`
+```ts
+type TypedBindingRendererConfig<T> = {
+    getItemType: (value: T) -> string,
+    renderers: { [string]: (React.Binding<T?>) -> React.Node },
+    primaryType: string,
+}
+```
+
+Configuration for [`Renderers.byTypedBinding`](#bytypedbinding). See the [typed bindings documentation](./core-concepts/renderers#typed-bindings) for usage details.
 
 ### `UDimRect`
 ```ts

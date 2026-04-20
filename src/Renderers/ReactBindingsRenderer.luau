@@ -28,12 +28,7 @@ local function ReactBindingsRenderer<T>(props: {
 	-- NOT in order.
 	-- This is to ensure that elements keep identity even when scrolled.
 	local itemBindingsAndSetters: { BindingAndSetter<T> }, setItemBindingsAndSetters = React.useState(function()
-		return createInitialSlots(
-			props.dimensions,
-			props.virtualizedListController,
-			props.direction,
-			nil
-		)
+		return createInitialSlots(props.dimensions, props.virtualizedListController, props.direction)
 	end)
 
 	local getKey: (value: T, index: number) -> string = props.getKey or getKeyDefault
@@ -130,6 +125,14 @@ local function ReactBindingsRenderer<T>(props: {
 				})
 			end
 
+			for _, deadSetter in deadSetters do
+				deadSetter({
+					contents = {
+						type = "vacant",
+					},
+				})
+			end
+
 			if #newBindingsAndSetters > 0 then
 				log(
 					"Needed to create %d more bindings to fit, there will be %d setters",
@@ -141,14 +144,6 @@ local function ReactBindingsRenderer<T>(props: {
 					table.move(newBindingsAndSetters, 1, #newBindingsAndSetters, #total + 1, total)
 					return total
 				end)
-			end
-
-			for _, deadSetter in deadSetters do
-				deadSetter({
-					contents = {
-						type = "vacant",
-					},
-				})
 			end
 		end)
 	end, { props.virtualizedListController, getKey, itemBindingsAndSetters } :: { unknown })

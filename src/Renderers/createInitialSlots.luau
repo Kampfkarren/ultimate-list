@@ -17,14 +17,12 @@ type LocatedItem<T> = createSlotElement.LocatedItem<T>
 export type BindingAndSetter<T> = {
 	binding: React.Binding<LocatedItem<T>>,
 	set: (LocatedItem<T>) -> (),
-	slotType: string?,
 }
 
 local function createInitialSlots<T>(
 	dimensions: Dimensions.Dimensions<T>,
 	virtualizedListController: createVirtualizedListController.VirtualizedListController<T>,
-	direction: "x" | "y",
-	slotType: string?
+	direction: "x" | "y"
 ): { BindingAndSetter<T> }
 	local total: { BindingAndSetter<T> } = {}
 
@@ -45,7 +43,6 @@ local function createInitialSlots<T>(
 		table.insert(total, {
 			binding = binding,
 			set = setBinding,
-			slotType = slotType,
 		})
 	end
 
