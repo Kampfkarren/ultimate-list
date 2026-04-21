@@ -70,38 +70,43 @@ UltimateList will render as many of these elements as it thinks it will need (e.
 ## Typed Bindings
 If your list contains multiple kinds of items (e.g. images, text, and buttons), you can use `UltimateList.Renderers.byTypedBinding`. This gives you the zero-rerender recycling performance of `byBinding`, but with separate recycling pools for each item type. Slots are never recycled across types, so each type can safely use different hooks and component trees.
 
-You provide:
-- **`getItemType`**: a function that returns a string identifying the type of each item.
-- **`renderers`**: a table mapping each type string to a binding callback (same signature as `byBinding`). Must include an entry for every type that `getItemType` can return.
-- **`primaryType`**: the dominant item type, used to pre-allocate slots. Must be a key in `renderers`. Slots for other types are created lazily as those items scroll in. Choosing a `primaryType` that isn't actually the majority of items won't hurt correctness, but leaves excess vacant slots allocated. Slot pools currently only grow--if your type distribution shifts drastically over time, the combined pool size tracks the historical worst case per type.
+You provide an ordered array of self-classifying renderers. Each renderer takes a `Binding<T?>` and returns either a `React.Node` ("I handle this value") or `nil` ("try the next renderer"). When a new item enters the viewport, renderers are tried in array order; the first to return a non-nil node claims the slot, and its returned node becomes the slot's subtree for life.
 
 ```lua
 renderer = UltimateList.Renderers.byTypedBinding({
-    primaryType = "text",
-
-    getItemType = function(item)
-        return item.type -- "category" or "text"
-    end,
+    primaryRendererIndex = 1,
 
     renderers = {
-        category = function(binding: React.Binding<Item?>)
-            return React.createElement("TextLabel", {
-                Size = UDim2.fromScale(1, 1),
-                Font = Enum.Font.BuilderSansBold,
-                TextSize = 30,
-                Text = binding:map(function(item: Item?)
-                    return if item then item.name else ""
-                end),
-            })
-        end,
+        -- Text rows (most common; primary).
+        function(binding: React.Binding<Item?>): React.Node?
+            local current = binding:getValue()
+            if current ~= nil and current.type ~= "text" then
+                return nil
+            end
 
-        text = function(binding: React.Binding<Item?>)
             return React.createElement("TextLabel", {
                 Size = UDim2.fromScale(1, 1),
                 Font = Enum.Font.BuilderSans,
                 TextSize = 20,
                 Text = binding:map(function(item: Item?)
-                    return if item then item.text else ""
+                    return if item and item.type == "text" then item.text else ""
+                end),
+            })
+        end,
+
+        -- Category headers.
+        function(binding: React.Binding<Item?>): React.Node?
+            local current = binding:getValue()
+            if current ~= nil and current.type ~= "category" then
+                return nil
+            end
+
+            return React.createElement("TextLabel", {
+                Size = UDim2.fromScale(1, 1),
+                Font = Enum.Font.BuilderSansBold,
+                TextSize = 30,
+                Text = binding:map(function(item: Item?)
+                    return if item and item.type == "category" then item.name else ""
                 end),
             })
         end,
@@ -109,9 +114,14 @@ renderer = UltimateList.Renderers.byTypedBinding({
 })
 ```
 
-When the user scrolls, a "text" slot that goes off-screen will only be reused for another "text" item. If a "category" item needs to appear and no vacant "category" slots exist, a new slot is created. This means you never get hook mismatch errors from recycling a category slot into a text slot (or vice versa).
+:::info Contract
+- **Return `nil` only when `binding:getValue()` is non-nil and not a type your renderer handles.** Early-return before subscribing to the binding -- decliners' subtrees are discarded, and any `binding:map` subscriptions they create leak until GC.
+- **When `primaryRendererIndex` is set, that renderer is additionally called with a nil-valued binding for each pre-allocated slot and must return a non-nil node.** In practice this means your `binding:map` callbacks should fall back to empty strings / defaults when the value is nil (the same thing you'd do in `byBinding`).
+- **Stable key implies stable type.** If two renders of your data source emit the same key, they must resolve to the same renderer. If you need an item to change type, give it a new key.
+:::
 
-The binding callback receives `T?` (nil when the slot is vacant), just like `byBinding`. Each type's callback is called exactly once per slot and the binding updates as items scroll in and out.
+You optionally provide:
+- **`primaryRendererIndex`**: the index (1-based) of the renderer to pre-allocate slots for. When set, UltimateList mounts a starting pool of slots of that renderer's type so items of that type can fill them without triggering a React re-render on first appearance. Slots for other renderers are created lazily as matching items scroll in. When omitted (`nil`), no pre-allocation happens -- slots are created on demand for every type. Set this only when one renderer clearly dominates your list; for balanced heterogeneous lists, leaving it unset avoids mounting pre-alloc slots that won't be reused. Slot pools currently only grow -- if your item distribution shifts drastically over time, the combined pool size tracks the historical worst case per renderer.
 
 ## What should I choose?
 Which renderer to choose depends on your use case. `byState` is significantly more flexible and will work with any kind of element, `byBinding` is more performant due to not triggering any React re-renders during scroll, but will not work for everything. Even when bindings do work, very complicated UIs will have significantly more complicated code and need to use more trickery than elements using state. `byTypedBinding` sits in between: it gives you the binding performance of `byBinding` while supporting heterogeneous item types that would otherwise require `byState`.

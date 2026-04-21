@@ -1,13 +1,34 @@
 --[[
 	ReactTypedBindingsRenderer
 
-	Extension of ReactBindingsRenderer that supports multiple item types
-	in a single list. Each item type gets its own binding callback, and
-	pool slots are only recycled within the same type.
+	Extension of ReactBindingsRenderer that supports multiple item types in a
+	single list via separate recycling pools per renderer.
 
-	When a slot's item changes type, the slot is vacated and a new slot
-	of the correct type is created. This ensures React never reconciles
-	incompatible element trees (which would break hooks).
+	Each renderer has signature `(React.Binding<T?>) -> React.Node?`. They
+	are tried in array order; the first to return a non-nil node claims the
+	slot and its returned node becomes the slot's permanent subtree. As the
+	slot is recycled, the binding's value changes and the subtree reacts via
+	binding:map -- the renderer itself is never called again for that slot.
+
+	Slots live in per-renderer pools (SlotsByRenderer<T>): a dense array
+	indexed by renderer index, each entry a { Slot<T> }. The "recycles only
+	within the same renderer's pool" invariant is structural rather than
+	enforced at sync time.
+
+	Contract:
+	- Return nil ONLY when binding:getValue() is non-nil and of a type
+	  this renderer doesn't handle. Callers that decline should early-
+	  return before subscribing to the binding (no binding:map, etc.),
+	  because decliners' subtrees are discarded and any subscriptions
+	  they created leak until GC.
+	- When primaryRendererIndex is set, that renderer is additionally
+	  called once per pre-allocated slot with a nil-valued binding and
+	  must return a non-nil node. Its binding:map callbacks must handle
+	  nil gracefully (typical: fall back to empty strings / defaults).
+	  When primaryRendererIndex is nil, no pre-allocation happens and
+	  no renderer is ever called with a nil-valued binding.
+	- Stable key implies stable type: if two renders of the data source
+	  emit the same key, they must resolve to the same renderer.
 
 	Usage: see Renderers.byTypedBinding
 ]]
@@ -19,6 +40,7 @@ local createDebugLogger = require(Src.Util.createDebugLogger)
 local createInitialSlots = require(script.Parent.createInitialSlots)
 local createSlotElement = require(script.Parent.createSlotElement)
 local createVirtualizedListController = require(Src.createVirtualizedListController)
+local deriveValueBinding = require(script.Parent.deriveValueBinding)
 local getKeyDefault = require(Src.Util.getKeyDefault)
 
 local e = React.createElement
@@ -27,115 +49,167 @@ local log = createDebugLogger("ReactTypedBindingsRenderer")
 
 type LocatedItem<T> = createSlotElement.LocatedItem<T>
 
--- Each typed slot carries the type it was created with. Once set, slotType
--- never changes for a given binding--slots are only recycled within their type.
-type TypedBindingAndSetter<T> = {
+-- A slot is a binding + its setter + the React.Node that the slot's
+-- renderer produced for it. Which renderer owns the slot is encoded
+-- structurally by which pool contains it (see SlotsByRenderer).
+type Slot<T> = {
 	binding: React.Binding<LocatedItem<T>>,
 	set: (LocatedItem<T>) -> (),
-	slotType: string,
+	content: React.Node,
 }
 
-type SetterBucketsByType<T> = { [string]: { (LocatedItem<T>) -> () } }
+-- Dense array indexed by rendererIndex in [1, #renderers]. Every index
+-- exists and holds an array (possibly empty). The invariant "a slot is
+-- only recycled for items of the same classified type" is enforced by
+-- the outer key: a slot lives in exactly one pool for its lifetime.
+type SlotsByRenderer<T> = { [number]: { Slot<T> } }
 
-local function pushInto<T>(buckets: SetterBucketsByType<T>, key: string, setter: (LocatedItem<T>) -> ())
-	if not buckets[key] then
-		buckets[key] = {}
+-- Per-renderer recycle queues built each sync: dead (slot's key left view)
+-- and vacant (slot was already empty). Dense over the same 1..#renderers
+-- range as SlotsByRenderer, so lookups never need a nil-guard.
+type RecycleQueuesByRenderer<T> = { [number]: { (LocatedItem<T>) -> () } }
+
+local function createEmptyPools<T>(rendererCount: number): { { any } }
+	local pools = table.create(rendererCount)
+	for i = 1, rendererCount do
+		pools[i] = {}
 	end
-	table.insert(buckets[key], setter)
+	return pools
 end
 
--- Pop a setter from buckets[itemType], or nil if none available.
-local function takeFromBucket<T>(buckets: SetterBucketsByType<T>, itemType: string): ((LocatedItem<T>) -> ())?
-	local list = buckets[itemType]
-	if list == nil then
-		return nil
+-- Iterate renderers in order with the slot's T? binding. The first to
+-- return non-nil claims the slot; its index and returned node are both
+-- the slot's for life. Errors if no renderer accepts.
+local function classifyAndBuild<T>(
+	valueBinding: React.Binding<T?>,
+	renderers: { (React.Binding<T?>) -> React.Node? }
+): (number, React.Node)
+	for index, renderer in renderers do
+		local node = renderer(valueBinding)
+		if node ~= nil then
+			return index, node
+		end
 	end
-	return table.remove(list)
+
+	error(
+		`ReactTypedBindingsRenderer: no renderer accepted the current value. `
+			.. `Ensure at least one renderer returns a non-nil React.Node for `
+			.. `every possible item value.`
+	)
 end
 
--- Categorize existing slots by their immutable slotType.
--- - deadByType: slots whose key is no longer in view (or whose item changed type)
--- - vacantByType: slots that were already vacant
--- Still-alive-same-type slots are updated in place.
-local function classifyExistingSlots<T>(
-	bindingsAndSetters: { TypedBindingAndSetter<T> },
+-- Build the initial SlotsByRenderer<T>. Pools are always dense over
+-- 1..#renderers; when primaryRendererIndex is set we pre-populate that
+-- pool with countHint slots whose subtree comes from the primary
+-- renderer called with a nil-valued binding (same as any vacant slot).
+-- Every other pool starts empty and grows on demand as matching items
+-- scroll in.
+local function createSlotsByRenderer<T>(
+	dimensions: Dimensions.Dimensions<T>,
+	virtualizedListController: createVirtualizedListController.VirtualizedListController<T>,
+	direction: "x" | "y",
+	renderers: { (React.Binding<T?>) -> React.Node? },
+	primaryRendererIndex: number?
+): SlotsByRenderer<T>
+	local pools: SlotsByRenderer<T> = createEmptyPools(#renderers) :: any
+
+	if primaryRendererIndex == nil then
+		return pools
+	end
+
+	local primaryRenderer = renderers[primaryRendererIndex]
+	local primaryPool = pools[primaryRendererIndex]
+	for _, bindingAndSetter in createInitialSlots(dimensions, virtualizedListController, direction) do
+		local content = primaryRenderer(deriveValueBinding(bindingAndSetter.binding))
+		if content == nil then
+			error(
+				`ReactTypedBindingsRenderer: primary renderer (index {primaryRendererIndex}) `
+					.. `returned nil for a vacant slot. The primary renderer must return a `
+					.. `node for nil values so pre-allocated slots have a committed subtree.`
+			)
+		end
+
+		table.insert(primaryPool, {
+			binding = bindingAndSetter.binding,
+			set = bindingAndSetter.set,
+			content = content,
+		})
+	end
+	return pools
+end
+
+-- Walk every pool: update-in-place any slot whose key is still in view,
+-- and bucket the rest into dead / vacant recycle queues. The outer key
+-- gives us the rendererIndex for free, so slots don't need to carry it.
+local function bucketExistingSlots<T>(
+	slotsByRenderer: SlotsByRenderer<T>,
 	newView: { T },
 	newRange: Vector3,
-	newKeyToItemIndexInView: { [string]: number? },
-	getItemType: (value: T) -> string
-): (SetterBucketsByType<T>, SetterBucketsByType<T>)
-	local deadByType: SetterBucketsByType<T> = {}
-	local vacantByType: SetterBucketsByType<T> = {}
+	newKeyToItemIndexInView: { [string]: number? }
+): (RecycleQueuesByRenderer<T>, RecycleQueuesByRenderer<T>)
+	local rendererCount = #slotsByRenderer
+	local dead = createEmptyPools(rendererCount)
+	local vacant = createEmptyPools(rendererCount)
 
-	for _, bindingAndSetter in bindingsAndSetters do
-		local locatedItem = bindingAndSetter.binding:getValue()
-		local slotType = bindingAndSetter.slotType
+	for rendererIndex, pool in slotsByRenderer do
+		for _, slot in pool do
+			local locatedItem = slot.binding:getValue()
 
-		if locatedItem.contents.type == "vacant" then
-			pushInto(vacantByType, slotType, bindingAndSetter.set)
-			continue
-		end
+			if locatedItem.contents.type == "vacant" then
+				table.insert(vacant[rendererIndex], slot.set)
+				continue
+			end
 
-		local key = locatedItem.contents.key
-		local itemIndexInView = newKeyToItemIndexInView[key]
+			local key = locatedItem.contents.key
+			local itemIndexInView = newKeyToItemIndexInView[key]
 
-		if itemIndexInView == nil then
-			pushInto(deadByType, slotType, bindingAndSetter.set)
-			continue
-		end
+			if itemIndexInView == nil then
+				log("%s is now dead", key)
+				table.insert(dead[rendererIndex], slot.set)
+				continue
+			end
 
-		local newValue = newView[itemIndexInView]
-		local newType = getItemType(newValue)
-
-		if newType ~= slotType then
-			-- Item's type no longer matches this slot's type.
-			-- Vacate the slot so it can be reused by an item of the same slotType.
-			pushInto(deadByType, slotType, bindingAndSetter.set)
-			continue
-		end
-
-		newKeyToItemIndexInView[key] = nil
-		if locatedItem.contents.value ~= newValue then
-			log("%s existed, but changed", key)
-			bindingAndSetter.set({
-				contents = {
-					type = "full",
-					index = itemIndexInView + (newRange.X - 1),
-					key = key,
-					value = newValue,
-				},
-			})
+			newKeyToItemIndexInView[key] = nil
+			local newValue = newView[itemIndexInView]
+			if locatedItem.contents.value ~= newValue then
+				log("%s existed, but changed", key)
+				slot.set({
+					contents = {
+						type = "full",
+						index = itemIndexInView + (newRange.X - 1),
+						key = key,
+						value = newValue,
+					},
+				})
+			end
 		end
 	end
 
-	return deadByType, vacantByType
+	return dead, vacant
 end
 
--- Assign new/changed items to slots of matching type, preferring dead slots
--- (they'd otherwise become vacant), then vacant slots, then creating fresh ones.
+-- Assign new items to slots. To pick the right pool we build each
+-- item's binding and classify it up front. If a dead or vacant setter
+-- is available in the winning renderer's queue, reuse it (discarding
+-- the just-built binding + node; never mounted, so any subscriptions
+-- die with it). Otherwise append the new slot to that renderer's pool
+-- in the returned SlotsByRenderer. Returns the new pools alongside a
+-- flag indicating whether any were populated, so callers don't have
+-- to scan pools afterwards to decide if a state update is needed.
 local function assignNewItems<T>(
 	newView: { T },
 	newRange: Vector3,
 	newKeyToItemIndexInView: { [string]: number? },
-	deadByType: SetterBucketsByType<T>,
-	vacantByType: SetterBucketsByType<T>,
-	getItemType: (value: T) -> string,
-	renderers: { [string]: (React.Binding<T?>) -> React.Node }
-): { TypedBindingAndSetter<T> }
-	local newBindingsAndSetters: { TypedBindingAndSetter<T> } = {}
+	dead: RecycleQueuesByRenderer<T>,
+	vacant: RecycleQueuesByRenderer<T>,
+	renderers: { (React.Binding<T?>) -> React.Node? }
+): (SlotsByRenderer<T>, boolean)
+	local newSlotsByRenderer: SlotsByRenderer<T> = createEmptyPools(#renderers) :: any
+	local hasNewSlots = false
 
 	for newKey, indexInView in newKeyToItemIndexInView do
 		assert(indexInView ~= nil, "Luau")
 		local value = newView[indexInView]
-		local itemType = getItemType(value)
-
-		if renderers[itemType] == nil then
-			error(
-				`ReactTypedBindingsRenderer: getItemType returned unknown type "{itemType}" `
-					.. `for item at index {indexInView + (newRange.X - 1)} (key "{newKey}"); `
-					.. `no renderer registered.`
-			)
-		end
 
 		local newLocatedItem: LocatedItem<T> = {
 			contents = {
@@ -146,30 +220,33 @@ local function assignNewItems<T>(
 			},
 		}
 
-		local deadSetter = takeFromBucket(deadByType, itemType)
+		local binding, setBinding = React.createBinding(newLocatedItem)
+		local rendererIndex, content = classifyAndBuild(deriveValueBinding(binding), renderers)
+
+		local deadSetter = table.remove(dead[rendererIndex], #dead[rendererIndex])
 		if deadSetter then
-			log("%s filling dead %s slot", newKey, itemType)
+			log("%s is filling dead renderer[%d] spot", newKey, rendererIndex)
 			deadSetter(newLocatedItem)
 			continue
 		end
 
-		local vacantSetter = takeFromBucket(vacantByType, itemType)
+		local vacantSetter = table.remove(vacant[rendererIndex], #vacant[rendererIndex])
 		if vacantSetter then
-			log("%s filling vacant %s slot", newKey, itemType)
+			log("%s is filling vacant renderer[%d] spot", newKey, rendererIndex)
 			vacantSetter(newLocatedItem)
 			continue
 		end
 
-		log("%s creating new %s slot", newKey, itemType)
-		local binding, setBinding = React.createBinding(newLocatedItem)
-		table.insert(newBindingsAndSetters, {
+		log("%s needs a new renderer[%d] slot", newKey, rendererIndex)
+		table.insert(newSlotsByRenderer[rendererIndex], {
 			binding = binding,
 			set = setBinding,
-			slotType = itemType,
+			content = content,
 		})
+		hasNewSlots = true
 	end
 
-	return newBindingsAndSetters
+	return newSlotsByRenderer, hasNewSlots
 end
 
 local function ReactTypedBindingsRenderer<T>(props: {
@@ -179,26 +256,19 @@ local function ReactTypedBindingsRenderer<T>(props: {
 	dimensions: Dimensions.Dimensions<T>,
 	direction: "x" | "y",
 
-	getItemType: (value: T) -> string,
-	renderers: { [string]: (React.Binding<T?>) -> React.Node },
-	primaryType: string,
+	renderers: { (React.Binding<T?>) -> React.Node? },
+	primaryRendererIndex: number?,
 
 	getKey: ((value: T, index: number) -> string)?,
 })
-	local itemBindingsAndSetters: { TypedBindingAndSetter<T> }, setItemBindingsAndSetters = React.useState(function()
-		-- Pre-allocated slots are stamped with primaryType; slots for other
-		-- types are created lazily as those items scroll in.
-		local initial = createInitialSlots(props.dimensions, props.virtualizedListController, props.direction)
-
-		local typed: { TypedBindingAndSetter<T> } = table.create(#initial)
-		for _, bindingAndSetter in initial do
-			table.insert(typed, {
-				binding = bindingAndSetter.binding,
-				set = bindingAndSetter.set,
-				slotType = props.primaryType,
-			})
-		end
-		return typed
+	local slotsByRenderer: SlotsByRenderer<T>, setSlotsByRenderer = React.useState(function()
+		return createSlotsByRenderer(
+			props.dimensions,
+			props.virtualizedListController,
+			props.direction,
+			props.renderers,
+			props.primaryRendererIndex
+		)
 	end)
 
 	local getKey: (value: T, index: number) -> string = props.getKey or getKeyDefault
@@ -213,70 +283,56 @@ local function ReactTypedBindingsRenderer<T>(props: {
 				newKeyToItemIndexInView[getKey(itemInNewView, index + (newRange.X - 1))] = index
 			end
 
-			local deadByType, vacantByType = classifyExistingSlots(
-				itemBindingsAndSetters,
-				newView,
-				newRange,
-				newKeyToItemIndexInView,
-				props.getItemType
-			)
+			local dead, vacant = bucketExistingSlots(slotsByRenderer, newView, newRange, newKeyToItemIndexInView)
 
-			local newBindingsAndSetters = assignNewItems(
-				newView,
-				newRange,
-				newKeyToItemIndexInView,
-				deadByType,
-				vacantByType,
-				props.getItemType,
-				props.renderers
-			)
+			local newSlotsByRenderer, hasNewSlots =
+				assignNewItems(newView, newRange, newKeyToItemIndexInView, dead, vacant, props.renderers)
 
-			-- Vacate remaining dead slots. slotType is NOT changed; the slot
-			-- retains its type so it can be reused for items of the same type.
-			for _, deadList in deadByType do
-				for _, deadSetter in deadList do
+			if hasNewSlots then
+				log("Created new typed slots")
+				setSlotsByRenderer(function(prev)
+					local nextPools = table.clone(prev)
+					for rendererIndex, newSlots in newSlotsByRenderer do
+						if #newSlots == 0 then
+							continue
+						end
+						local extended = table.clone(prev[rendererIndex])
+						table.move(newSlots, 1, #newSlots, #extended + 1, extended)
+						nextPools[rendererIndex] = extended
+					end
+					return nextPools
+				end)
+			end
+
+			-- Vacate any leftover dead setters. The slot stays in its pool
+			-- (the pool is the renderer it committed to), just flipped to
+			-- vacant so the next matching item can reuse it cheaply.
+			-- TODO: Consider periodic compaction of excess vacant slots to bound pool growth.
+			for _, deadQueue in dead do
+				for _, deadSetter in deadQueue do
 					deadSetter({
 						contents = { type = "vacant" },
 					})
 				end
 			end
-
-			-- TODO: Consider periodic compaction of excess vacant slots to bound pool growth.
-
-			if #newBindingsAndSetters > 0 then
-				log("Created %d new typed slots", #newBindingsAndSetters)
-				setItemBindingsAndSetters(function(total)
-					total = table.clone(total)
-					table.move(newBindingsAndSetters, 1, #newBindingsAndSetters, #total + 1, total)
-					return total
-				end)
-			end
 		end)
-	end, { props.virtualizedListController, getKey, itemBindingsAndSetters, props.getItemType } :: { unknown })
+	end, { props.virtualizedListController, getKey, slotsByRenderer, props.renderers } :: { unknown })
 
 	local children: { [string]: React.Node } = {}
-	for index, itemBindingAndSetter in itemBindingsAndSetters do
-		local slotType = itemBindingAndSetter.slotType
-		local callback = props.renderers[slotType]
-
-		-- Should be unreachable: assignNewItems validates types before creating slots
-		-- and primaryType is validated at Renderers.byTypedBinding construction time.
-		if callback == nil then
-			error(`ReactTypedBindingsRenderer: no renderer registered for item type "{slotType}"`)
+	for rendererIndex, pool in slotsByRenderer do
+		for index, slot in pool do
+			-- The outer rendererIndex is the structural pool identity, so
+			-- numeric indices in different pools don't collide.
+			local key = `renderer{rendererIndex}_Item{index}`
+			children[key] = createSlotElement(
+				slot.binding,
+				props.scrollAxisBinding,
+				props.dimensions,
+				props.direction,
+				props.virtualizedListController,
+				slot.content
+			)
 		end
-
-		-- Key namespaced by slotType because two slots in different pools
-		-- can share the same numeric index.
-		local key, element = createSlotElement(
-			itemBindingAndSetter.binding,
-			props.scrollAxisBinding,
-			props.dimensions,
-			props.direction,
-			props.virtualizedListController,
-			callback,
-			`{slotType}_Item{index}`
-		)
-		children[key] = element
 	end
 
 	return e(React.Fragment, {}, children)

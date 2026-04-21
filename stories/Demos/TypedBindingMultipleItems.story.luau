@@ -97,45 +97,57 @@ return function(target)
 				return itemWithUDimRect.udimRect
 			end),
 
-			renderer = UltimateList.Renderers.byTypedBinding({
-				primaryType = "text",
+		renderer = UltimateList.Renderers.byTypedBinding({
+			-- Renderers are tried in order; the first to return a non-nil
+			-- node claims the slot. Text is the most common type and the
+			-- primary (pre-allocated) renderer, so it also handles vacant
+			-- slots (nil input) by falling through to its base node.
+			primaryRendererIndex = 1,
 
-				getItemType = function(itemWithUDimRect: ItemWithUDimRect)
-					return itemWithUDimRect.item.type
+			renderers = {
+				-- Text rows.
+				function(binding: React.Binding<ItemWithUDimRect?>): React.Node?
+					local current = binding:getValue()
+					if current ~= nil and current.item.type ~= "text" then
+						return nil
+					end
+
+					return e("TextLabel", {
+						BackgroundColor3 = Color3.new(1, 1, 1),
+						Font = Enum.Font.BuilderSans,
+						Size = UDim2.fromScale(1, 1),
+						TextColor3 = Color3.new(0, 0, 0),
+						TextSize = 20,
+
+						Text = binding:map(function(itemWithUDimRect: ItemWithUDimRect?)
+							local item = if itemWithUDimRect then itemWithUDimRect.item else nil
+							return if item and item.type == "text" then item.text else ""
+						end),
+					})
 				end,
 
-				renderers = {
-					category = function(binding: React.Binding<ItemWithUDimRect?>)
-						return e("TextLabel", {
-							BackgroundColor3 = Color3.new(0.9, 0.9, 0.95),
-							Font = Enum.Font.BuilderSansBold,
-							Size = UDim2.fromScale(1, 1),
-							TextColor3 = Color3.new(0, 0, 0),
-							TextSize = 30,
+				-- Category headers.
+				function(binding: React.Binding<ItemWithUDimRect?>): React.Node?
+					local current = binding:getValue()
+					if current ~= nil and current.item.type ~= "category" then
+						return nil
+					end
 
-							Text = binding:map(function(itemWithUDimRect: ItemWithUDimRect?)
-								local item = if itemWithUDimRect then itemWithUDimRect.item else nil
-								return if item and item.type == "category" then item.name else ""
-							end),
-						})
-					end,
+					return e("TextLabel", {
+						BackgroundColor3 = Color3.new(0.9, 0.9, 0.95),
+						Font = Enum.Font.BuilderSansBold,
+						Size = UDim2.fromScale(1, 1),
+						TextColor3 = Color3.new(0, 0, 0),
+						TextSize = 30,
 
-					text = function(binding: React.Binding<ItemWithUDimRect?>)
-						return e("TextLabel", {
-							BackgroundColor3 = Color3.new(1, 1, 1),
-							Font = Enum.Font.BuilderSans,
-							Size = UDim2.fromScale(1, 1),
-							TextColor3 = Color3.new(0, 0, 0),
-							TextSize = 20,
-
-							Text = binding:map(function(itemWithUDimRect: ItemWithUDimRect?)
-								local item = if itemWithUDimRect then itemWithUDimRect.item else nil
-								return if item and item.type == "text" then item.text else ""
-							end),
-						})
-					end,
-				},
-			}),
+						Text = binding:map(function(itemWithUDimRect: ItemWithUDimRect?)
+							local item = if itemWithUDimRect then itemWithUDimRect.item else nil
+							return if item and item.type == "category" then item.name else ""
+						end),
+					})
+				end,
+			},
+		}),
 
 			direction = "y",
 		}),

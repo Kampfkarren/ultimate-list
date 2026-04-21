@@ -158,9 +158,8 @@ local function ScrollingFrame<T>(
 					dimensions = props.dimensions,
 					direction = props.direction,
 
-					getItemType = props.renderer.getItemType,
 					renderers = props.renderer.renderers,
-					primaryType = props.renderer.primaryType,
+					primaryRendererIndex = props.renderer.primaryRendererIndex,
 					getKey = props.getKey,
 				})
 				else exhaustiveMatch(props.renderer.type),

@@ -13,9 +13,8 @@ export type Renderer<T> = {
 	callback: (React.Binding<T?>) -> React.Node,
 } | {
 	type: "byTypedBinding",
-	getItemType: (value: T) -> string,
-	renderers: { [string]: (React.Binding<T?>) -> React.Node },
-	primaryType: string,
+	renderers: { (React.Binding<T?>) -> React.Node? },
+	primaryRendererIndex: number?,
 }
 
 export type StateRendererConfig = {
@@ -23,9 +22,8 @@ export type StateRendererConfig = {
 }
 
 export type TypedBindingRendererConfig<T> = {
-	getItemType: (value: T) -> string,
-	renderers: { [string]: (React.Binding<T?>) -> React.Node },
-	primaryType: string,
+	renderers: { (React.Binding<T?>) -> React.Node? },
+	primaryRendererIndex: number?,
 }
 
 function Renderers.byState<T>(callback: (T) -> React.Node, config: StateRendererConfig?): Renderer<T>
@@ -44,18 +42,23 @@ function Renderers.byBinding<T>(callback: (React.Binding<T?>) -> React.Node): Re
 end
 
 function Renderers.byTypedBinding<T>(config: TypedBindingRendererConfig<T>): Renderer<T>
-	if config.renderers[config.primaryType] == nil then
-		error(
-			`Renderers.byTypedBinding: primaryType "{config.primaryType}" has no entry in renderers. `
-				.. `It must be one of the keys of the renderers table.`
-		)
+	if #config.renderers == 0 then
+		error(`Renderers.byTypedBinding: renderers must be a non-empty array.`)
+	end
+
+	if config.primaryRendererIndex ~= nil then
+		if config.primaryRendererIndex < 1 or config.primaryRendererIndex > #config.renderers then
+			error(
+				`Renderers.byTypedBinding: primaryRendererIndex {config.primaryRendererIndex} is out of range `
+					.. `for renderers array of length {#config.renderers}.`
+			)
+		end
 	end
 
 	return {
 		type = "byTypedBinding",
-		getItemType = config.getItemType,
 		renderers = config.renderers,
-		primaryType = config.primaryType,
+		primaryRendererIndex = config.primaryRendererIndex,
 	}
 end
 

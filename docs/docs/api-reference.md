@@ -147,11 +147,10 @@ Renderers.byTypedBinding<T>(
 ): Renderer<T>
 ```
 
-Creates a binding-based renderer with separate recycling pools per item type. Items are classified by `getItemType`, and each type's slots are recycled independently.
+Creates a binding-based renderer with separate recycling pools per item type. Items are classified by the `renderers` array itself: each renderer receives the slot's binding and returns either a `React.Node` (claiming the slot) or `nil` (declining). Renderers are tried in array order exactly once per slot, at slot creation; the first non-nil wins and its returned node is the slot's subtree for life.
 
-- `config.getItemType: (value: T) -> string`: Returns a string identifying the type of an item.
-- `config.renderers: { [string]: (React.Binding<T?>) -> React.Node }`: A table mapping each type string to a binding callback. Must include an entry for every type that `getItemType` can return.
-- `config.primaryType: string`: The dominant item type. Must be a key in `renderers`. Pre-allocated slots are created with this type for optimal initial rendering. Slots for other types are created on demand as those items enter the viewport.
+- `config.renderers: { (React.Binding<T?>) -> React.Node? }`: An ordered array of self-classifying renderers. See the [typed bindings renderer contract](./core-concepts/renderers#typed-bindings) for the rules each renderer must follow -- in particular, decliners must return `nil` before subscribing to the binding, and when `primaryRendererIndex` is set that renderer must return a node for `nil` values (pre-allocated slots start vacant). Callers must also preserve the "stable key implies stable type" invariant: if two renders of the data source emit the same key, they must resolve to the same renderer.
+- `config.primaryRendererIndex: number?`: Opt-in pre-allocation. When set to a 1-based index within `[1, #renderers]`, UltimateList pre-mounts a starting pool of slots for that renderer so items of its type can fill them without triggering a React re-render on first appearance. When omitted (`nil`, the default), no pre-allocation happens -- slots are created lazily for every type as items scroll in. Set this only when one renderer clearly dominates your list; for balanced heterogeneous lists, leaving it unset avoids mounting slots that won't be reused. Slot pools currently only grow -- if your item distribution shifts drastically over time, the combined pool size tracks the historical worst case per renderer.
 
 See also ["Typed Bindings" section on the renderers documentation](./core-concepts/renderers#typed-bindings).
 
@@ -170,9 +169,8 @@ Tagged union for a [renderer](./core-concepts/renderers). The contents of this a
 ### `TypedBindingRendererConfig<T>`
 ```ts
 type TypedBindingRendererConfig<T> = {
-    getItemType: (value: T) -> string,
-    renderers: { [string]: (React.Binding<T?>) -> React.Node },
-    primaryType: string,
+    renderers: { (React.Binding<T?>) -> React.Node? },
+    primaryRendererIndex: number?,
 }
 ```
 

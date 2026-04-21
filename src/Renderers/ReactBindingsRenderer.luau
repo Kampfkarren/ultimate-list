@@ -6,6 +6,7 @@ local createDebugLogger = require(Src.Util.createDebugLogger)
 local createInitialSlots = require(script.Parent.createInitialSlots)
 local createSlotElement = require(script.Parent.createSlotElement)
 local createVirtualizedListController = require(Src.createVirtualizedListController)
+local deriveValueBinding = require(script.Parent.deriveValueBinding)
 local getKeyDefault = require(Src.Util.getKeyDefault)
 
 local e = React.createElement
@@ -125,14 +126,6 @@ local function ReactBindingsRenderer<T>(props: {
 				})
 			end
 
-			for _, deadSetter in deadSetters do
-				deadSetter({
-					contents = {
-						type = "vacant",
-					},
-				})
-			end
-
 			if #newBindingsAndSetters > 0 then
 				log(
 					"Needed to create %d more bindings to fit, there will be %d setters",
@@ -145,6 +138,14 @@ local function ReactBindingsRenderer<T>(props: {
 					return total
 				end)
 			end
+
+			for _, deadSetter in deadSetters do
+				deadSetter({
+					contents = {
+						type = "vacant",
+					},
+				})
+			end
 		end)
 	end, { props.virtualizedListController, getKey, itemBindingsAndSetters } :: { unknown })
 
@@ -152,16 +153,14 @@ local function ReactBindingsRenderer<T>(props: {
 	for index, itemBindingAndSetter in itemBindingsAndSetters do
 		local binding: React.Binding<LocatedItem<T>> = itemBindingAndSetter.binding :: any
 
-		local key, element = createSlotElement(
+		children[`Item{index}`] = createSlotElement(
 			binding,
 			props.scrollAxisBinding,
 			props.dimensions,
 			props.direction,
 			props.virtualizedListController,
-			props.callback,
-			`Item{index}`
+			props.callback(deriveValueBinding(binding))
 		)
-		children[key] = element
 	end
 
 	return e(React.Fragment, {}, children)

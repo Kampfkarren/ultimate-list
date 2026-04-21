@@ -135,72 +135,91 @@ return function(target)
 				return tostring(index)
 			end,
 
-			renderer = UltimateList.Renderers.byTypedBinding({
-				primaryType = "text",
+		renderer = UltimateList.Renderers.byTypedBinding({
+			-- Renderers are tried in order; the first to return a non-nil
+			-- node claims the slot. Text is the most common type (~70% of
+			-- items) and the primary (pre-allocated) renderer.
+			primaryRendererIndex = 1,
 
-				getItemType = function(itemWithUDimRect: ItemWithUDimRect)
-					return itemWithUDimRect.item.type
+			renderers = {
+				function(binding: React.Binding<ItemWithUDimRect?>): React.Node?
+					local current = binding:getValue()
+					if current ~= nil and current.item.type ~= "text" then
+						return nil
+					end
+
+					return e("TextLabel", {
+						BackgroundColor3 = Color3.new(1, 1, 1),
+						Font = Enum.Font.BuilderSans,
+						Size = UDim2.fromScale(1, 1),
+						TextColor3 = Color3.new(0, 0, 0),
+						TextSize = 18,
+
+						Text = binding:map(function(itemWithUDimRect: ItemWithUDimRect?)
+							local item = if itemWithUDimRect then itemWithUDimRect.item else nil
+							return if item and item.type == "text" then item.text else ""
+						end),
+					})
 				end,
 
-				renderers = {
-					category = function(binding: React.Binding<ItemWithUDimRect?>)
-						return e("TextLabel", {
-							BackgroundColor3 = Color3.new(0.9, 0.9, 0.95),
+				function(binding: React.Binding<ItemWithUDimRect?>): React.Node?
+					local current = binding:getValue()
+					if current ~= nil and current.item.type ~= "category" then
+						return nil
+					end
+
+					return e("TextLabel", {
+						BackgroundColor3 = Color3.new(0.9, 0.9, 0.95),
+						Font = Enum.Font.BuilderSansBold,
+						Size = UDim2.fromScale(1, 1),
+						TextColor3 = Color3.new(0, 0, 0),
+						TextSize = 30,
+
+						Text = binding:map(function(itemWithUDimRect: ItemWithUDimRect?)
+							local item = if itemWithUDimRect then itemWithUDimRect.item else nil
+							return if item and item.type == "category" then item.name else ""
+						end),
+					})
+				end,
+
+				function(binding: React.Binding<ItemWithUDimRect?>): React.Node?
+					local current = binding:getValue()
+					if current ~= nil and current.item.type ~= "image" then
+						return nil
+					end
+
+					return e("Frame", {
+						BackgroundColor3 = Color3.new(0.85, 0.95, 0.85),
+						Size = UDim2.fromScale(1, 1),
+					}, {
+						Label = e("TextLabel", {
+							BackgroundTransparency = 1,
 							Font = Enum.Font.BuilderSansBold,
 							Size = UDim2.fromScale(1, 1),
-							TextColor3 = Color3.new(0, 0, 0),
-							TextSize = 30,
+							TextColor3 = Color3.new(0, 0.2, 0),
+							TextSize = 22,
 
 							Text = binding:map(function(itemWithUDimRect: ItemWithUDimRect?)
 								local item = if itemWithUDimRect then itemWithUDimRect.item else nil
-								return if item and item.type == "category" then item.name else ""
+								return if item and item.type == "image" then item.label else ""
 							end),
-						})
-					end,
+						}),
+					})
+				end,
 
-					text = function(binding: React.Binding<ItemWithUDimRect?>)
-						return e("TextLabel", {
-							BackgroundColor3 = Color3.new(1, 1, 1),
-							Font = Enum.Font.BuilderSans,
-							Size = UDim2.fromScale(1, 1),
-							TextColor3 = Color3.new(0, 0, 0),
-							TextSize = 18,
+				function(binding: React.Binding<ItemWithUDimRect?>): React.Node?
+					local current = binding:getValue()
+					if current ~= nil and current.item.type ~= "divider" then
+						return nil
+					end
 
-							Text = binding:map(function(itemWithUDimRect: ItemWithUDimRect?)
-								local item = if itemWithUDimRect then itemWithUDimRect.item else nil
-								return if item and item.type == "text" then item.text else ""
-							end),
-						})
-					end,
-
-					image = function(binding: React.Binding<ItemWithUDimRect?>)
-						return e("Frame", {
-							BackgroundColor3 = Color3.new(0.85, 0.95, 0.85),
-							Size = UDim2.fromScale(1, 1),
-						}, {
-							Label = e("TextLabel", {
-								BackgroundTransparency = 1,
-								Font = Enum.Font.BuilderSansBold,
-								Size = UDim2.fromScale(1, 1),
-								TextColor3 = Color3.new(0, 0.2, 0),
-								TextSize = 22,
-
-								Text = binding:map(function(itemWithUDimRect: ItemWithUDimRect?)
-									local item = if itemWithUDimRect then itemWithUDimRect.item else nil
-									return if item and item.type == "image" then item.label else ""
-								end),
-							}),
-						})
-					end,
-
-					divider = function(_binding: React.Binding<ItemWithUDimRect?>)
-						return e("Frame", {
-							BackgroundColor3 = Color3.new(0.6, 0.6, 0.6),
-							Size = UDim2.fromScale(1, 1),
-						})
-					end,
-				},
-			}),
+					return e("Frame", {
+						BackgroundColor3 = Color3.new(0.6, 0.6, 0.6),
+						Size = UDim2.fromScale(1, 1),
+					})
+				end,
+			},
+		}),
 
 			direction = "y",
 		}),

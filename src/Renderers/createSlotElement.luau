@@ -1,9 +1,12 @@
 --[[
 	Shared render-phase helper for binding-based renderers.
 
-	Given a LocatedItem<T> binding, dimensions context, and a render callback,
-	produces the positioned Frame container with Size/Position/Visible bindings
-	and the Content child from the callback.
+	Given a LocatedItem<T> binding and dimensions context, produces the
+	positioned Frame container with Size/Position/Visible bindings, wrapping
+	a caller-provided Content node.
+
+	Callers are responsible for deriving the `T?` view of the binding and
+	building Content themselves--this helper only owns the Frame wrapper.
 ]]
 local Src = script:FindFirstAncestor("ultimate-list")
 
@@ -33,9 +36,8 @@ local function createSlotElement<T>(
 	dimensions: Dimensions.Dimensions<T>,
 	direction: "x" | "y",
 	virtualizedListController: createVirtualizedListController.VirtualizedListController<T>,
-	callback: (React.Binding<T?>) -> React.Node,
-	key: string
-): (string, React.Node)
+	content: React.Node
+): React.Node
 	local udimRectBinding: React.Binding<Dimensions.UDimRect> = binding:map(function(locatedItem: LocatedItem<T>)
 		if locatedItem.contents.type == "vacant" then
 			return {
@@ -53,7 +55,7 @@ local function createSlotElement<T>(
 		)
 	end)
 
-	local element = e("Frame", {
+	return e("Frame", {
 		BackgroundTransparency = 1,
 
 		Position = joinAndMapBindings(function(udimRect: Dimensions.UDimRect, scrollAxis: number)
@@ -68,12 +70,8 @@ local function createSlotElement<T>(
 			return locatedItem.contents.type == "full"
 		end),
 	}, {
-		Content = callback(binding:map(function(locatedItem: LocatedItem<T>)
-			return if locatedItem.contents.type == "full" then locatedItem.contents.value else nil
-		end)),
+		Content = content,
 	})
-
-	return key, element
 end
 
 return createSlotElement
