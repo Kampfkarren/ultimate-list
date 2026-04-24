@@ -1,9 +1,3 @@
---[[
-	Derive the T? view of a slot's LocatedItem<T> binding: the current item
-	value when the slot is full, or nil when vacant. Used by binding-based
-	renderers to hand user callbacks a simple Binding<T?> without exposing
-	the LocatedItem wrapper.
-]]
 local Src = script:FindFirstAncestor("ultimate-list")
 
 local React = require(Src.Parent.React)

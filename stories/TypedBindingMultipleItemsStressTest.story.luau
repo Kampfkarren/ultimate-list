@@ -1,12 +1,3 @@
---[[
-	Stress test for Renderers.byTypedBinding with heterogeneous item types.
-
-	Generates 100k items across four types (category, text, image, divider)
-	with varying densities so each type's recycling pool gets exercised as
-	the user scrolls. Each type has a distinct height to force
-	Dimensions.getter paths, and a distinct visual treatment so recycling
-	correctness is visible at a glance.
-]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)

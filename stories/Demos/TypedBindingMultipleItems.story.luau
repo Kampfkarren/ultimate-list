@@ -1,12 +1,3 @@
---[[
-	Demonstrates byTypedBinding with heterogeneous item types.
-
-	Categories and text entries each get their own recycling pool.
-	Category slots are never reused for text entries (and vice versa),
-	so each type can use different hooks without violating React rules.
-
-	Compare with MultipleItems.story.luau in this folder, which uses byState.
-]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)

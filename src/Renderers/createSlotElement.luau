@@ -1,13 +1,3 @@
---[[
-	Shared render-phase helper for binding-based renderers.
-
-	Given a LocatedItem<T> binding and dimensions context, produces the
-	positioned Frame container with Size/Position/Visible bindings, wrapping
-	a caller-provided Content node.
-
-	Callers are responsible for deriving the `T?` view of the binding and
-	building Content themselves--this helper only owns the Frame wrapper.
-]]
 local Src = script:FindFirstAncestor("ultimate-list")
 
 local Dimensions = require(Src.Dimensions)

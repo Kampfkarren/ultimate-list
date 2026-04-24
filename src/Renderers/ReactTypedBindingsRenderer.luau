@@ -1,38 +1,3 @@
---[[
-	ReactTypedBindingsRenderer
-
-	Extension of ReactBindingsRenderer that supports multiple item types in a
-	single list via separate recycling pools per renderer.
-
-	Each renderer has signature `(React.Binding<T?>) -> React.Node?`. They
-	are tried in array order; the first to return a non-nil node claims the
-	slot and its returned node becomes the slot's permanent subtree. As the
-	slot is recycled, the binding's value changes and the subtree reacts via
-	binding:map -- the renderer itself is never called again for that slot.
-
-	Slots live in per-renderer pools (SlotsByRenderer<T>): a dense array
-	indexed by renderer index, each entry a { Slot<T> }. The "recycles only
-	within the same renderer's pool" invariant is structural rather than
-	enforced at sync time.
-
-	Contract:
-	- Return nil ONLY when binding:getValue() is non-nil and of a type
-	  this renderer doesn't handle. Callers that decline should early-
-	  return before subscribing to the binding (no binding:map, etc.),
-	  because decliners' subtrees are discarded and any subscriptions
-	  they created leak until GC.
-	- The first renderer is the primary: when preAllocate is true (the
-	  default), it is called once per pre-allocated slot with a nil-
-	  valued binding and must return a non-nil node. Its binding:map
-	  callbacks must handle nil gracefully (typical: fall back to
-	  empty strings / defaults). When preAllocate is false, no
-	  pre-allocation happens and no renderer is ever called with a
-	  nil-valued binding.
-	- Stable key implies stable type: if two renders of the data source
-	  emit the same key, they must resolve to the same renderer.
-
-	Usage: see Renderers.byTypedBinding
-]]
 local Src = script:FindFirstAncestor("ultimate-list")
 
 local Dimensions = require(Src.Dimensions)
@@ -50,24 +15,17 @@ local log = createDebugLogger("ReactTypedBindingsRenderer")
 
 type LocatedItem<T> = createSlotElement.LocatedItem<T>
 
--- A slot is a binding + its setter + the React.Node that the slot's
--- renderer produced for it. Which renderer owns the slot is encoded
--- structurally by which pool contains it (see SlotsByRenderer).
 type Slot<T> = {
 	binding: React.Binding<LocatedItem<T>>,
 	set: (LocatedItem<T>) -> (),
 	content: React.Node,
 }
 
--- Dense array indexed by rendererIndex in [1, #renderers]. Every index
--- exists and holds an array (possibly empty). The invariant "a slot is
--- only recycled for items of the same classified type" is enforced by
--- the outer key: a slot lives in exactly one pool for its lifetime.
+-- A slot lives in exactly one pool for its lifetime; that structurally
+-- enforces the "only recycled for items classified to the same renderer"
+-- invariant without needing to carry the rendererIndex on each slot.
 type SlotsByRenderer<T> = { [number]: { Slot<T> } }
 
--- Per-renderer recycle queues built each sync: dead (slot's key left view)
--- and vacant (slot was already empty). Dense over the same 1..#renderers
--- range as SlotsByRenderer, so lookups never need a nil-guard.
 type RecycleQueuesByRenderer<T> = { [number]: { (LocatedItem<T>) -> () } }
 
 local function createEmptyPools<T>(rendererCount: number): { { T } }
@@ -78,9 +36,6 @@ local function createEmptyPools<T>(rendererCount: number): { { T } }
 	return pools
 end
 
--- Iterate renderers in order with the slot's T? binding. The first to
--- return non-nil claims the slot; its index and returned node are both
--- the slot's for life. Errors if no renderer accepts.
 local function classifyAndBuild<T>(
 	valueBinding: React.Binding<T?>,
 	renderers: { (React.Binding<T?>) -> React.Node? }
@@ -99,12 +54,6 @@ local function classifyAndBuild<T>(
 	)
 end
 
--- Build the initial SlotsByRenderer<T>. Pools are always dense over
--- 1..#renderers; when preAllocate is true (the default) we pre-populate
--- the first renderer's pool with countHint slots whose subtree comes
--- from renderers[1] called with a nil-valued binding (same as any
--- vacant slot). Every other pool starts empty and grows on demand as
--- matching items scroll in.
 local function createSlotsByRenderer<T>(
 	dimensions: Dimensions.Dimensions<T>,
 	virtualizedListController: createVirtualizedListController.VirtualizedListController<T>,
@@ -140,9 +89,6 @@ local function createSlotsByRenderer<T>(
 	return pools
 end
 
--- Walk every pool: update-in-place any slot whose key is still in view,
--- and bucket the rest into dead / vacant recycle queues. The outer key
--- gives us the rendererIndex for free, so slots don't need to carry it.
 local function bucketExistingSlots<T>(
 	slotsByRenderer: SlotsByRenderer<T>,
 	newView: { T },
@@ -188,14 +134,6 @@ local function bucketExistingSlots<T>(
 	return dead, vacant
 end
 
--- Assign new items to slots. To pick the right pool we build each
--- item's binding and classify it up front. If a dead or vacant setter
--- is available in the winning renderer's queue, reuse it (discarding
--- the just-built binding + node; never mounted, so any subscriptions
--- die with it). Otherwise append the new slot to that renderer's pool
--- in the returned SlotsByRenderer. Returns the new pools alongside a
--- flag indicating whether any were populated, so callers don't have
--- to scan pools afterwards to decide if a state update is needed.
 local function assignNewItems<T>(
 	newView: { T },
 	newRange: Vector3,
@@ -304,9 +242,6 @@ local function ReactTypedBindingsRenderer<T>(props: {
 				end)
 			end
 
-			-- Vacate any leftover dead setters. The slot stays in its pool
-			-- (the pool is the renderer it committed to), just flipped to
-			-- vacant so the next matching item can reuse it cheaply.
 			-- TODO: Consider periodic compaction of excess vacant slots to bound pool growth.
 			for _, deadQueue in dead do
 				for _, deadSetter in deadQueue do
@@ -321,8 +256,6 @@ local function ReactTypedBindingsRenderer<T>(props: {
 	local children: { [string]: React.Node } = {}
 	for rendererIndex, pool in slotsByRenderer do
 		for index, slot in pool do
-			-- The outer rendererIndex is the structural pool identity, so
-			-- numeric indices in different pools don't collide.
 			local key = `renderer{rendererIndex}_Item{index}`
 			children[key] = createSlotElement(
 				slot.binding,
