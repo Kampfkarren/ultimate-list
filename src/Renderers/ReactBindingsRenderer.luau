@@ -53,12 +53,12 @@ local function ReactBindingsRenderer<T>(props: {
 
 			for _, bindingAndSetter in itemBindingsAndSetters do
 				local locatedItem = bindingAndSetter.binding:getValue()
-				if locatedItem.contents.type == "vacant" then
+				if locatedItem.type == "vacant" then
 					table.insert(vacantSetters, bindingAndSetter.set)
 					continue
 				end
 
-				local key = locatedItem.contents.key
+				local key = locatedItem.key
 				local itemIndexInView = newKeyToItemIndexInView[key]
 				if itemIndexInView == nil then
 					log("%s is now dead", key)
@@ -67,15 +67,13 @@ local function ReactBindingsRenderer<T>(props: {
 					newKeyToItemIndexInView[key] = nil
 
 					local newValue = newView[itemIndexInView]
-					if locatedItem.contents.value ~= newValue then
+					if locatedItem.value ~= newValue then
 						log("%s existed, but changed", key)
 						bindingAndSetter.set({
-							contents = {
-								type = "full",
-								index = itemIndexInView + (newRange.X - 1),
-								key = key,
-								value = newValue,
-							},
+							type = "full",
+							index = itemIndexInView + (newRange.X - 1),
+							key = key,
+							value = newValue,
 						})
 					end
 				end
@@ -94,12 +92,10 @@ local function ReactBindingsRenderer<T>(props: {
 				local value = newView[indexInView]
 
 				local newLocatedItem: LocatedItem<T> = {
-					contents = {
-						type = "full",
-						index = indexInView + (newRange.X - 1),
-						key = newKey,
-						value = value,
-					},
+					type = "full",
+					index = indexInView + (newRange.X - 1),
+					key = newKey,
+					value = value,
 				}
 
 				-- Dead setters (referring to an older value that is no longer visible) go first
@@ -141,9 +137,7 @@ local function ReactBindingsRenderer<T>(props: {
 
 			for _, deadSetter in deadSetters do
 				deadSetter({
-					contents = {
-						type = "vacant",
-					},
+					type = "vacant",
 				})
 			end
 		end)

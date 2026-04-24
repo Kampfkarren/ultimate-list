@@ -70,10 +70,10 @@ type SlotsByRenderer<T> = { [number]: { Slot<T> } }
 -- range as SlotsByRenderer, so lookups never need a nil-guard.
 type RecycleQueuesByRenderer<T> = { [number]: { (LocatedItem<T>) -> () } }
 
-local function createEmptyPools<T>(rendererCount: number): { { any } }
+local function createEmptyPools<T>(rendererCount: number): { { T } }
 	local pools = table.create(rendererCount)
-	for i = 1, rendererCount do
-		pools[i] = {}
+	for index = 1, rendererCount do
+		pools[index] = {}
 	end
 	return pools
 end
@@ -93,9 +93,9 @@ local function classifyAndBuild<T>(
 	end
 
 	error(
-		`ReactTypedBindingsRenderer: no renderer accepted the current value. `
-			.. `Ensure at least one renderer returns a non-nil React.Node for `
-			.. `every possible item value.`
+		"ReactTypedBindingsRenderer: no renderer accepted the current value. "
+			.. "Ensure at least one renderer returns a non-nil React.Node for "
+			.. "every possible item value."
 	)
 end
 
@@ -112,7 +112,7 @@ local function createSlotsByRenderer<T>(
 	renderers: { (React.Binding<T?>) -> React.Node? },
 	preAllocate: boolean
 ): SlotsByRenderer<T>
-	local pools: SlotsByRenderer<T> = createEmptyPools(#renderers) :: any
+	local pools: SlotsByRenderer<T> = createEmptyPools(#renderers)
 
 	if not preAllocate then
 		return pools
@@ -124,10 +124,10 @@ local function createSlotsByRenderer<T>(
 		local content = primaryRenderer(deriveValueBinding(bindingAndSetter.binding))
 		if content == nil then
 			error(
-				`ReactTypedBindingsRenderer: the first renderer (primary) returned nil for a `
-					.. `vacant slot. The first renderer must return a node for nil values so `
-					.. `pre-allocated slots have a committed subtree. Either reorder renderers `
-					.. `so the one that handles vacant slots is first, or pass preAllocate = false.`
+				"ReactTypedBindingsRenderer: the first renderer (primary) returned nil for a "
+					.. "vacant slot. The first renderer must return a node for nil values so "
+					.. "pre-allocated slots have a committed subtree. Either reorder renderers "
+					.. "so the one that handles vacant slots is first, or pass preAllocate = false."
 			)
 		end
 
@@ -150,19 +150,19 @@ local function bucketExistingSlots<T>(
 	newKeyToItemIndexInView: { [string]: number? }
 ): (RecycleQueuesByRenderer<T>, RecycleQueuesByRenderer<T>)
 	local rendererCount = #slotsByRenderer
-	local dead = createEmptyPools(rendererCount)
-	local vacant = createEmptyPools(rendererCount)
+	local dead: RecycleQueuesByRenderer<T> = createEmptyPools(rendererCount)
+	local vacant: RecycleQueuesByRenderer<T> = createEmptyPools(rendererCount)
 
 	for rendererIndex, pool in slotsByRenderer do
 		for _, slot in pool do
 			local locatedItem = slot.binding:getValue()
 
-			if locatedItem.contents.type == "vacant" then
+			if locatedItem.type == "vacant" then
 				table.insert(vacant[rendererIndex], slot.set)
 				continue
 			end
 
-			local key = locatedItem.contents.key
+			local key = locatedItem.key
 			local itemIndexInView = newKeyToItemIndexInView[key]
 
 			if itemIndexInView == nil then
@@ -173,15 +173,13 @@ local function bucketExistingSlots<T>(
 
 			newKeyToItemIndexInView[key] = nil
 			local newValue = newView[itemIndexInView]
-			if locatedItem.contents.value ~= newValue then
+			if locatedItem.value ~= newValue then
 				log("%s existed, but changed", key)
 				slot.set({
-					contents = {
-						type = "full",
-						index = itemIndexInView + (newRange.X - 1),
-						key = key,
-						value = newValue,
-					},
+					type = "full",
+					index = itemIndexInView + (newRange.X - 1),
+					key = key,
+					value = newValue,
 				})
 			end
 		end
@@ -206,7 +204,7 @@ local function assignNewItems<T>(
 	vacant: RecycleQueuesByRenderer<T>,
 	renderers: { (React.Binding<T?>) -> React.Node? }
 ): (SlotsByRenderer<T>, boolean)
-	local newSlotsByRenderer: SlotsByRenderer<T> = createEmptyPools(#renderers) :: any
+	local newSlotsByRenderer: SlotsByRenderer<T> = createEmptyPools(#renderers)
 	local hasNewSlots = false
 
 	for newKey, indexInView in newKeyToItemIndexInView do
@@ -214,12 +212,10 @@ local function assignNewItems<T>(
 		local value = newView[indexInView]
 
 		local newLocatedItem: LocatedItem<T> = {
-			contents = {
-				type = "full",
-				index = indexInView + (newRange.X - 1),
-				key = newKey,
-				value = value,
-			},
+			type = "full",
+			index = indexInView + (newRange.X - 1),
+			key = newKey,
+			value = value,
 		}
 
 		local binding, setBinding = React.createBinding(newLocatedItem)
@@ -315,7 +311,7 @@ local function ReactTypedBindingsRenderer<T>(props: {
 			for _, deadQueue in dead do
 				for _, deadSetter in deadQueue do
 					deadSetter({
-						contents = { type = "vacant" },
+						type = "vacant",
 					})
 				end
 			end

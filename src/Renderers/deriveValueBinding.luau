@@ -13,7 +13,7 @@ type LocatedItem<T> = createSlotElement.LocatedItem<T>
 
 local function deriveValueBinding<T>(binding: React.Binding<LocatedItem<T>>): React.Binding<T?>
 	return binding:map(function(locatedItem: LocatedItem<T>)
-		return if locatedItem.contents.type == "full" then locatedItem.contents.value else nil
+		return if locatedItem.type == "full" then locatedItem.value else nil
 	end)
 end
 

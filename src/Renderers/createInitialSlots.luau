@@ -36,9 +36,8 @@ local function createInitialSlots<T>(
 	end
 
 	for _ = 1, countHint do
-		local binding, setBinding = React.createBinding({
-			contents = { type = "vacant" },
-		} :: LocatedItem<T>)
+		local initial: LocatedItem<T> = { type = "vacant" }
+		local binding, setBinding = React.createBinding(initial)
 
 		table.insert(total, {
 			binding = binding,

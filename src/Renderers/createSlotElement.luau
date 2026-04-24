@@ -20,14 +20,12 @@ local joinAndMapBindings = require(Src.Util.joinAndMapBindings)
 local e = React.createElement
 
 export type LocatedItem<T> = {
-	contents: {
-		type: "vacant",
-	} | {
-		type: "full",
-		index: number,
-		key: string,
-		value: T,
-	},
+	type: "vacant",
+} | {
+	type: "full",
+	index: number,
+	key: string,
+	value: T,
 }
 
 local function createSlotElement<T>(
@@ -39,7 +37,7 @@ local function createSlotElement<T>(
 	content: React.Node
 ): React.Node
 	local udimRectBinding: React.Binding<Dimensions.UDimRect> = binding:map(function(locatedItem: LocatedItem<T>)
-		if locatedItem.contents.type == "vacant" then
+		if locatedItem.type == "vacant" then
 			return {
 				size = UDim2.new(),
 				position = UDim2.new(),
@@ -48,8 +46,8 @@ local function createSlotElement<T>(
 
 		return DimensionsMethods.getUDimRect(
 			dimensions,
-			locatedItem.contents.value,
-			locatedItem.contents.index,
+			locatedItem.value,
+			locatedItem.index,
 			virtualizedListController.getWindowSize(),
 			direction
 		)
@@ -67,7 +65,7 @@ local function createSlotElement<T>(
 		end),
 
 		Visible = binding:map(function(locatedItem: LocatedItem<T>)
-			return locatedItem.contents.type == "full"
+			return locatedItem.type == "full"
 		end),
 	}, {
 		Content = content,
