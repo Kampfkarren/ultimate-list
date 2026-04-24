@@ -14,7 +14,7 @@ export type Renderer<T> = {
 } | {
 	type: "byTypedBinding",
 	renderers: { (React.Binding<T?>) -> React.Node? },
-	primaryRendererIndex: number?,
+	preAllocate: boolean?,
 }
 
 export type StateRendererConfig = {
@@ -23,7 +23,7 @@ export type StateRendererConfig = {
 
 export type TypedBindingRendererConfig<T> = {
 	renderers: { (React.Binding<T?>) -> React.Node? },
-	primaryRendererIndex: number?,
+	preAllocate: boolean?,
 }
 
 function Renderers.byState<T>(callback: (T) -> React.Node, config: StateRendererConfig?): Renderer<T>
@@ -46,19 +46,10 @@ function Renderers.byTypedBinding<T>(config: TypedBindingRendererConfig<T>): Ren
 		error(`Renderers.byTypedBinding: renderers must be a non-empty array.`)
 	end
 
-	if config.primaryRendererIndex ~= nil then
-		if config.primaryRendererIndex < 1 or config.primaryRendererIndex > #config.renderers then
-			error(
-				`Renderers.byTypedBinding: primaryRendererIndex {config.primaryRendererIndex} is out of range `
-					.. `for renderers array of length {#config.renderers}.`
-			)
-		end
-	end
-
 	return {
 		type = "byTypedBinding",
 		renderers = config.renderers,
-		primaryRendererIndex = config.primaryRendererIndex,
+		preAllocate = config.preAllocate,
 	}
 end
 

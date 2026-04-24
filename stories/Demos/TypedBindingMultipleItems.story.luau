@@ -99,11 +99,10 @@ return function(target)
 
 		renderer = UltimateList.Renderers.byTypedBinding({
 			-- Renderers are tried in order; the first to return a non-nil
-			-- node claims the slot. Text is the most common type and the
-			-- primary (pre-allocated) renderer, so it also handles vacant
-			-- slots (nil input) by falling through to its base node.
-			primaryRendererIndex = 1,
-
+			-- node claims the slot. The first renderer is the primary and
+			-- is used to pre-allocate slots, so it must also return a node
+			-- for vacant (nil) input -- text is the most common type and
+			-- naturally falls through to its base node.
 			renderers = {
 				-- Text rows.
 				function(binding: React.Binding<ItemWithUDimRect?>): React.Node?

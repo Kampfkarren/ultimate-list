@@ -21,12 +21,13 @@
 	  return before subscribing to the binding (no binding:map, etc.),
 	  because decliners' subtrees are discarded and any subscriptions
 	  they created leak until GC.
-	- When primaryRendererIndex is set, that renderer is additionally
-	  called once per pre-allocated slot with a nil-valued binding and
-	  must return a non-nil node. Its binding:map callbacks must handle
-	  nil gracefully (typical: fall back to empty strings / defaults).
-	  When primaryRendererIndex is nil, no pre-allocation happens and
-	  no renderer is ever called with a nil-valued binding.
+	- The first renderer is the primary: when preAllocate is true (the
+	  default), it is called once per pre-allocated slot with a nil-
+	  valued binding and must return a non-nil node. Its binding:map
+	  callbacks must handle nil gracefully (typical: fall back to
+	  empty strings / defaults). When preAllocate is false, no
+	  pre-allocation happens and no renderer is ever called with a
+	  nil-valued binding.
 	- Stable key implies stable type: if two renders of the data source
 	  emit the same key, they must resolve to the same renderer.
 
@@ -99,33 +100,34 @@ local function classifyAndBuild<T>(
 end
 
 -- Build the initial SlotsByRenderer<T>. Pools are always dense over
--- 1..#renderers; when primaryRendererIndex is set we pre-populate that
--- pool with countHint slots whose subtree comes from the primary
--- renderer called with a nil-valued binding (same as any vacant slot).
--- Every other pool starts empty and grows on demand as matching items
--- scroll in.
+-- 1..#renderers; when preAllocate is true (the default) we pre-populate
+-- the first renderer's pool with countHint slots whose subtree comes
+-- from renderers[1] called with a nil-valued binding (same as any
+-- vacant slot). Every other pool starts empty and grows on demand as
+-- matching items scroll in.
 local function createSlotsByRenderer<T>(
 	dimensions: Dimensions.Dimensions<T>,
 	virtualizedListController: createVirtualizedListController.VirtualizedListController<T>,
 	direction: "x" | "y",
 	renderers: { (React.Binding<T?>) -> React.Node? },
-	primaryRendererIndex: number?
+	preAllocate: boolean
 ): SlotsByRenderer<T>
 	local pools: SlotsByRenderer<T> = createEmptyPools(#renderers) :: any
 
-	if primaryRendererIndex == nil then
+	if not preAllocate then
 		return pools
 	end
 
-	local primaryRenderer = renderers[primaryRendererIndex]
-	local primaryPool = pools[primaryRendererIndex]
+	local primaryRenderer = renderers[1]
+	local primaryPool = pools[1]
 	for _, bindingAndSetter in createInitialSlots(dimensions, virtualizedListController, direction) do
 		local content = primaryRenderer(deriveValueBinding(bindingAndSetter.binding))
 		if content == nil then
 			error(
-				`ReactTypedBindingsRenderer: primary renderer (index {primaryRendererIndex}) `
-					.. `returned nil for a vacant slot. The primary renderer must return a `
-					.. `node for nil values so pre-allocated slots have a committed subtree.`
+				`ReactTypedBindingsRenderer: the first renderer (primary) returned nil for a `
+					.. `vacant slot. The first renderer must return a node for nil values so `
+					.. `pre-allocated slots have a committed subtree. Either reorder renderers `
+					.. `so the one that handles vacant slots is first, or pass preAllocate = false.`
 			)
 		end
 
@@ -257,17 +259,19 @@ local function ReactTypedBindingsRenderer<T>(props: {
 	direction: "x" | "y",
 
 	renderers: { (React.Binding<T?>) -> React.Node? },
-	primaryRendererIndex: number?,
+	preAllocate: boolean?,
 
 	getKey: ((value: T, index: number) -> string)?,
 })
+	local preAllocate = if props.preAllocate ~= nil then props.preAllocate else true
+
 	local slotsByRenderer: SlotsByRenderer<T>, setSlotsByRenderer = React.useState(function()
 		return createSlotsByRenderer(
 			props.dimensions,
 			props.virtualizedListController,
 			props.direction,
 			props.renderers,
-			props.primaryRendererIndex
+			preAllocate
 		)
 	end)
 

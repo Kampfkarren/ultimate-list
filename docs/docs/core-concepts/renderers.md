@@ -74,10 +74,10 @@ You provide an ordered array of self-classifying renderers. Each renderer takes 
 
 ```lua
 renderer = UltimateList.Renderers.byTypedBinding({
-    primaryRendererIndex = 1,
-
     renderers = {
-        -- Text rows (most common; primary).
+        -- Text rows (most common; the first renderer is the primary and
+        -- is used to pre-allocate slots, so it must also return a node
+        -- for vacant (nil) input).
         function(binding: React.Binding<Item?>): React.Node?
             local current = binding:getValue()
             if current ~= nil and current.type ~= "text" then
@@ -116,12 +116,12 @@ renderer = UltimateList.Renderers.byTypedBinding({
 
 :::info Contract
 - **Return `nil` only when `binding:getValue()` is non-nil and not a type your renderer handles.** Early-return before subscribing to the binding -- decliners' subtrees are discarded, and any `binding:map` subscriptions they create leak until GC.
-- **When `primaryRendererIndex` is set, that renderer is additionally called with a nil-valued binding for each pre-allocated slot and must return a non-nil node.** In practice this means your `binding:map` callbacks should fall back to empty strings / defaults when the value is nil (the same thing you'd do in `byBinding`).
+- **The first renderer is the primary: when `preAllocate` is true (the default), it is called with a nil-valued binding for each pre-allocated slot and must return a non-nil node.** In practice this means your `binding:map` callbacks should fall back to empty strings / defaults when the value is nil (the same thing you'd do in `byBinding`).
 - **Stable key implies stable type.** If two renders of your data source emit the same key, they must resolve to the same renderer. If you need an item to change type, give it a new key.
 :::
 
 You optionally provide:
-- **`primaryRendererIndex`**: the index (1-based) of the renderer to pre-allocate slots for. When set, UltimateList mounts a starting pool of slots of that renderer's type so items of that type can fill them without triggering a React re-render on first appearance. Slots for other renderers are created lazily as matching items scroll in. When omitted (`nil`), no pre-allocation happens -- slots are created on demand for every type. Set this only when one renderer clearly dominates your list; for balanced heterogeneous lists, leaving it unset avoids mounting pre-alloc slots that won't be reused. Slot pools currently only grow -- if your item distribution shifts drastically over time, the combined pool size tracks the historical worst case per renderer.
+- **`preAllocate`**: defaults to `true`. When true, UltimateList pre-mounts a starting pool of slots for the first renderer so items of its type can fill them without triggering a React re-render on first appearance. Slots for other renderers are created lazily as matching items scroll in. Set this to `false` for balanced heterogeneous lists where no single type dominates -- in that case, pre-allocating for the first renderer wastes slots that won't be reused by the time the dominant types show up. Slot pools currently only grow -- if your item distribution shifts drastically over time, the combined pool size tracks the historical worst case per renderer.
 
 ## What should I choose?
 Which renderer to choose depends on your use case. `byState` is significantly more flexible and will work with any kind of element, `byBinding` is more performant due to not triggering any React re-renders during scroll, but will not work for everything. Even when bindings do work, very complicated UIs will have significantly more complicated code and need to use more trickery than elements using state. `byTypedBinding` sits in between: it gives you the binding performance of `byBinding` while supporting heterogeneous item types that would otherwise require `byState`.

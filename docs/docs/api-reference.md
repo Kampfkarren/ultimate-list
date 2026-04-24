@@ -149,8 +149,8 @@ Renderers.byTypedBinding<T>(
 
 Creates a binding-based renderer with separate recycling pools per item type. Items are classified by the `renderers` array itself: each renderer receives the slot's binding and returns either a `React.Node` (claiming the slot) or `nil` (declining). Renderers are tried in array order exactly once per slot, at slot creation; the first non-nil wins and its returned node is the slot's subtree for life.
 
-- `config.renderers: { (React.Binding<T?>) -> React.Node? }`: An ordered array of self-classifying renderers. See the [typed bindings renderer contract](./core-concepts/renderers#typed-bindings) for the rules each renderer must follow -- in particular, decliners must return `nil` before subscribing to the binding, and when `primaryRendererIndex` is set that renderer must return a node for `nil` values (pre-allocated slots start vacant). Callers must also preserve the "stable key implies stable type" invariant: if two renders of the data source emit the same key, they must resolve to the same renderer.
-- `config.primaryRendererIndex: number?`: Opt-in pre-allocation. When set to a 1-based index within `[1, #renderers]`, UltimateList pre-mounts a starting pool of slots for that renderer so items of its type can fill them without triggering a React re-render on first appearance. When omitted (`nil`, the default), no pre-allocation happens -- slots are created lazily for every type as items scroll in. Set this only when one renderer clearly dominates your list; for balanced heterogeneous lists, leaving it unset avoids mounting slots that won't be reused. Slot pools currently only grow -- if your item distribution shifts drastically over time, the combined pool size tracks the historical worst case per renderer.
+- `config.renderers: { (React.Binding<T?>) -> React.Node? }`: An ordered array of self-classifying renderers. The first renderer is the primary. See the [typed bindings renderer contract](./core-concepts/renderers#typed-bindings) for the rules each renderer must follow -- in particular, the first renderer must return a non-nil node for a nil-valued binding when `preAllocate` is true, and callers must preserve the "stable key implies stable type" invariant: if two renders of the data source emit the same key, they must resolve to the same renderer.
+- `config.preAllocate: boolean?`: Defaults to `true`. When true, UltimateList pre-mounts a starting pool of slots for the first renderer so items of its type can fill them without triggering a React re-render on first appearance. Slots for other renderers are created lazily as matching items scroll in. Set to `false` for balanced heterogeneous lists where no single type dominates -- pre-allocating for the first renderer would waste slots that won't be reused. Slot pools currently only grow -- if your item distribution shifts drastically over time, the combined pool size tracks the historical worst case per renderer.
 
 See also ["Typed Bindings" section on the renderers documentation](./core-concepts/renderers#typed-bindings).
 
@@ -170,7 +170,7 @@ Tagged union for a [renderer](./core-concepts/renderers). The contents of this a
 ```ts
 type TypedBindingRendererConfig<T> = {
     renderers: { (React.Binding<T?>) -> React.Node? },
-    primaryRendererIndex: number?,
+    preAllocate: boolean?,
 }
 ```
 

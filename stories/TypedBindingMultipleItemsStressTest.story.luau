@@ -138,9 +138,8 @@ return function(target)
 		renderer = UltimateList.Renderers.byTypedBinding({
 			-- Renderers are tried in order; the first to return a non-nil
 			-- node claims the slot. Text is the most common type (~70% of
-			-- items) and the primary (pre-allocated) renderer.
-			primaryRendererIndex = 1,
-
+			-- items) and is first, so it's also the primary (pre-allocated)
+			-- renderer that handles vacant slots.
 			renderers = {
 				function(binding: React.Binding<ItemWithUDimRect?>): React.Node?
 					local current = binding:getValue()
