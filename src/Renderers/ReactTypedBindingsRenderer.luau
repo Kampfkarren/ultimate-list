@@ -161,8 +161,7 @@ local function ReactTypedBindingsRenderer<T>(props: {
 	getKey: ((value: T, index: number) -> string)?,
 })
 	local slotsByRenderer: SlotsByRenderer<T>, setSlotsByRenderer = React.useState(function()
-		local pools: SlotsByRenderer<T> = createEmptyPools(#props.renderers)
-		return pools
+		return createEmptyPools(#props.renderers)
 	end)
 
 	local getKey: (value: T, index: number) -> string = props.getKey or getKeyDefault
@@ -198,7 +197,6 @@ local function ReactTypedBindingsRenderer<T>(props: {
 				end)
 			end
 
-			-- TODO: Consider periodic compaction of excess vacant slots to bound pool growth.
 			for _, deadQueue in dead do
 				for _, deadSetter in deadQueue do
 					deadSetter({
