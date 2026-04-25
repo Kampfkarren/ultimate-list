@@ -13,6 +13,7 @@ export type MutableDataSourceMethods<T> = DataSources.MutableDataSourceMethods<T
 
 export type Renderer<T> = Renderers.Renderer<T>
 export type StateRendererConfig = Renderers.StateRendererConfig
+export type TypedBindingRendererConfig<T> = Renderers.TypedBindingRendererConfig<T>
 
 local UltimateList = {}
 

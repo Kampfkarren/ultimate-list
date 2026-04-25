@@ -6,13 +6,10 @@ local React = require(Src.Parent.React)
 local Renderers = require(Src.Renderers)
 local adjustPositionToScrollAxis = require(Src.Dimensions.adjustPositionToScrollAxis)
 local createVirtualizedListController = require(Src.createVirtualizedListController)
+local getKeyDefault = require(Src.Util.getKeyDefault)
 local joinAndMapBindings = require(Src.Util.joinAndMapBindings)
 
 local e = React.createElement
-
-local function getKeyDefault<T>(_value: T, index: number): string
-	return tostring(index)
-end
 
 -- Lock the scroll axis in place during updates to avoid flickering
 type ScrollLock<T> = {

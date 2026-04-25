@@ -140,6 +140,19 @@ Takes a callback that provides a React node based on the provided binding. When 
 
 See also ["Bindings" section on the renderers documentation](./core-concepts/renderers#bindings).
 
+### `byTypedBinding`
+```ts
+Renderers.byTypedBinding<T>(
+    config: TypedBindingRendererConfig<T>
+): Renderer<T>
+```
+
+Creates a binding-based renderer with separate recycling pools per item type. Items are classified by the `renderers` array itself: each renderer receives the slot's binding and returns either a `React.Node` (claiming the slot) or `nil` (declining). Renderers are tried in array order exactly once per slot, at slot creation; the first non-nil wins and its returned node is the slot's subtree for life.
+
+- `config.renderers: { (React.Binding<T?>) -> React.Node? }`: An ordered array of self-classifying renderers. See the [typed bindings section](./core-concepts/renderers#typed-bindings) for the rules each renderer must follow -- in particular, items sharing a key across renders must classify to the same renderer.
+
+See also ["Typed Bindings" section on the renderers documentation](./core-concepts/renderers#typed-bindings).
+
 ## Types
 These are the exported types of UltimateList. If you are using Wally, use [`wally-package-types`](https://github.com/JohnnyMorganz/wally-package-types) to get access to them.
 
@@ -151,6 +164,15 @@ Tagged union for a [data source](./core-concepts/data-sources). The contents of 
 
 ### `Renderer<T>`
 Tagged union for a [renderer](./core-concepts/renderers). The contents of this are not considered stable, and you should always use the [Renderers](#renderers) API directly.
+
+### `TypedBindingRendererConfig<T>`
+```ts
+type TypedBindingRendererConfig<T> = {
+    renderers: { (React.Binding<T?>) -> React.Node? },
+}
+```
+
+Configuration for [`Renderers.byTypedBinding`](#bytypedbinding). See the [typed bindings documentation](./core-concepts/renderers#typed-bindings) for usage details.
 
 ### `UDimRect`
 ```ts
