@@ -14,7 +14,6 @@ export type Renderer<T> = {
 } | {
 	type: "byTypedBinding",
 	renderers: { (React.Binding<T?>) -> React.Node? },
-	preAllocate: boolean?,
 }
 
 export type StateRendererConfig = {
@@ -23,7 +22,6 @@ export type StateRendererConfig = {
 
 export type TypedBindingRendererConfig<T> = {
 	renderers: { (React.Binding<T?>) -> React.Node? },
-	preAllocate: boolean?,
 }
 
 function Renderers.byState<T>(callback: (T) -> React.Node, config: StateRendererConfig?): Renderer<T>
@@ -49,7 +47,6 @@ function Renderers.byTypedBinding<T>(config: TypedBindingRendererConfig<T>): Ren
 	return {
 		type = "byTypedBinding",
 		renderers = config.renderers,
-		preAllocate = config.preAllocate,
 	}
 end
 

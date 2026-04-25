@@ -3,7 +3,6 @@ local Src = script:FindFirstAncestor("ultimate-list")
 local Dimensions = require(Src.Dimensions)
 local React = require(Src.Parent.React)
 local createDebugLogger = require(Src.Util.createDebugLogger)
-local createInitialSlots = require(script.Parent.createInitialSlots)
 local createSlotElement = require(script.Parent.createSlotElement)
 local createVirtualizedListController = require(Src.createVirtualizedListController)
 local deriveValueBinding = require(script.Parent.deriveValueBinding)
@@ -52,41 +51,6 @@ local function classifyAndBuild<T>(
 			.. "Ensure at least one renderer returns a non-nil React.Node for "
 			.. "every possible item value."
 	)
-end
-
-local function createSlotsByRenderer<T>(
-	dimensions: Dimensions.Dimensions<T>,
-	virtualizedListController: createVirtualizedListController.VirtualizedListController<T>,
-	direction: "x" | "y",
-	renderers: { (React.Binding<T?>) -> React.Node? },
-	preAllocate: boolean
-): SlotsByRenderer<T>
-	local pools: SlotsByRenderer<T> = createEmptyPools(#renderers)
-
-	if not preAllocate then
-		return pools
-	end
-
-	local primaryRenderer = renderers[1]
-	local primaryPool = pools[1]
-	for _, bindingAndSetter in createInitialSlots(dimensions, virtualizedListController, direction) do
-		local content = primaryRenderer(deriveValueBinding(bindingAndSetter.binding))
-		if content == nil then
-			error(
-				"ReactTypedBindingsRenderer: the first renderer (primary) returned nil for a "
-					.. "vacant slot. The first renderer must return a node for nil values so "
-					.. "pre-allocated slots have a committed subtree. Either reorder renderers "
-					.. "so the one that handles vacant slots is first, or pass preAllocate = false."
-			)
-		end
-
-		table.insert(primaryPool, {
-			binding = bindingAndSetter.binding,
-			set = bindingAndSetter.set,
-			content = content,
-		})
-	end
-	return pools
 end
 
 local function bucketExistingSlots<T>(
@@ -193,20 +157,12 @@ local function ReactTypedBindingsRenderer<T>(props: {
 	direction: "x" | "y",
 
 	renderers: { (React.Binding<T?>) -> React.Node? },
-	preAllocate: boolean?,
 
 	getKey: ((value: T, index: number) -> string)?,
 })
-	local preAllocate = if props.preAllocate ~= nil then props.preAllocate else true
-
 	local slotsByRenderer: SlotsByRenderer<T>, setSlotsByRenderer = React.useState(function()
-		return createSlotsByRenderer(
-			props.dimensions,
-			props.virtualizedListController,
-			props.direction,
-			props.renderers,
-			preAllocate
-		)
+		local pools: SlotsByRenderer<T> = createEmptyPools(#props.renderers)
+		return pools
 	end)
 
 	local getKey: (value: T, index: number) -> string = props.getKey or getKeyDefault

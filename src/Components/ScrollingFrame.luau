@@ -159,7 +159,6 @@ local function ScrollingFrame<T>(
 					direction = props.direction,
 
 					renderers = props.renderer.renderers,
-					preAllocate = props.renderer.preAllocate,
 					getKey = props.getKey,
 				})
 				else exhaustiveMatch(props.renderer.type),

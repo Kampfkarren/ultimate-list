@@ -149,8 +149,7 @@ Renderers.byTypedBinding<T>(
 
 Creates a binding-based renderer with separate recycling pools per item type. Items are classified by the `renderers` array itself: each renderer receives the slot's binding and returns either a `React.Node` (claiming the slot) or `nil` (declining). Renderers are tried in array order exactly once per slot, at slot creation; the first non-nil wins and its returned node is the slot's subtree for life.
 
-- `config.renderers: { (React.Binding<T?>) -> React.Node? }`: An ordered array of self-classifying renderers. The first renderer is the primary. See the [typed bindings section](./core-concepts/renderers#typed-bindings) for the rules each renderer must follow -- in particular, when `preAllocate` is true the first renderer must return a non-nil node for a nil-valued binding, and items sharing a key across renders must classify to the same renderer.
-- `config.preAllocate: boolean?`: Defaults to `true`. When true, UltimateList pre-mounts a starting pool of slots for the first renderer so items of its type can fill them without triggering a React re-render on first appearance. Slots for other renderers are created lazily as matching items scroll in. Set to `false` for balanced heterogeneous lists where no single type dominates -- pre-allocating for the first renderer would waste slots that won't be reused. Slot pools currently only grow -- if your item distribution shifts drastically over time, the combined pool size tracks the historical worst case per renderer.
+- `config.renderers: { (React.Binding<T?>) -> React.Node? }`: An ordered array of self-classifying renderers. See the [typed bindings section](./core-concepts/renderers#typed-bindings) for the rules each renderer must follow -- in particular, items sharing a key across renders must classify to the same renderer.
 
 See also ["Typed Bindings" section on the renderers documentation](./core-concepts/renderers#typed-bindings).
 
@@ -170,7 +169,6 @@ Tagged union for a [renderer](./core-concepts/renderers). The contents of this a
 ```ts
 type TypedBindingRendererConfig<T> = {
     renderers: { (React.Binding<T?>) -> React.Node? },
-    preAllocate: boolean?,
 }
 ```
 

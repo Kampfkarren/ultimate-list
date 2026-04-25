@@ -75,16 +75,16 @@ You provide an ordered array of self-classifying renderers. Each renderer takes 
 ```lua
 renderer = UltimateList.Renderers.byTypedBinding({
     renderers = {
-        -- Text rows (most common; the first renderer is the primary and
-        -- is used to pre-allocate slots, so it must also return a node
-        -- for vacant (nil) input).
+        -- Text rows.
         function(binding: React.Binding<Item?>): React.Node?
-            -- Renderer functions are NOT component functions -- they run once
-            -- per slot to classify, and then the system re-runs your
-            -- `binding:map` callbacks whenever the binding updates. Calling
-            -- `binding:getValue()` here is safe (and is how you classify).
+            -- Renderer functions are NOT component functions -- they run
+            -- exactly once per slot, at classification time. `:getValue()`
+            -- is safe here (and is how you classify) because we don't need
+            -- a fresh value later: once a slot is classified, it's
+            -- committed to this renderer for life, and any subsequent
+            -- value updates are reflected through `binding:map` below.
             local current = binding:getValue()
-            if current ~= nil and current.type ~= "text" then
+            if current == nil or current.type ~= "text" then
                 return nil
             end
 
@@ -101,7 +101,7 @@ renderer = UltimateList.Renderers.byTypedBinding({
         -- Category headers.
         function(binding: React.Binding<Item?>): React.Node?
             local current = binding:getValue()
-            if current ~= nil and current.type ~= "category" then
+            if current == nil or current.type ~= "category" then
                 return nil
             end
 
@@ -125,9 +125,6 @@ Renderer functions are **not** component functions. They run once per slot, not 
 A few rules:
 - If you want to take a slot but render nothing visible, return `false` (or any non-nil falsy value). The slot's binding is still claimed; the rendered subtree is just empty.
 - **If your data source emits the same key for two different items, those items must classify to the same renderer.** The slot is committed to one renderer for life, so changing classification under a stable key would mean a hook-shape mismatch on recycle. If you need an item to change type, give it a new key.
-
-You optionally provide:
-- **`preAllocate`**: defaults to `true`. When true, UltimateList pre-mounts a starting pool of slots for the first renderer so items of its type can fill them without triggering a React re-render on first appearance. Slots for other renderers are created lazily as matching items scroll in. Set this to `false` for balanced heterogeneous lists where no single type dominates -- in that case, pre-allocating for the first renderer wastes slots that won't be reused by the time the dominant types show up. Slot pools currently only grow -- if your item distribution shifts drastically over time, the combined pool size tracks the historical worst case per renderer.
 
 ## What should I choose?
 Which renderer to choose depends on your use case. `byState` is significantly more flexible and will work with any kind of element, `byBinding` is more performant due to not triggering any React re-renders during scroll, but will not work for everything. Even when bindings do work, very complicated UIs will have significantly more complicated code and need to use more trickery than elements using state. `byTypedBinding` is `byBinding` for heterogeneous lists: it gives you the performance of `byBinding` while supporting multiple item types that would otherwise require `byState`.
