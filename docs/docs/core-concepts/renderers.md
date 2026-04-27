@@ -118,7 +118,7 @@ renderer = UltimateList.Renderers.byTypedBinding({
 Renderer functions are **not** component functions. They run once per slot, not on every re-render. You cannot call React hooks (`useState`, `useEffect`, etc.) inside them.
 :::
 
-A slot is committed to one renderer for life, so two items sharing a key must classify the same way. If you need an item's type to change, give it a new key.
+Each slot is committed to one renderer for life, so the `getKey` you pass to `ScrollingFrame` must always return the same string for items of the same type. The default index-based key is unsafe for lists whose length changes -- pass a `getKey` derived from the item itself.
 
 ## What should I choose?
 Which renderer to choose depends on your use case. `byState` is significantly more flexible and will work with any kind of element, `byBinding` is more performant due to not triggering any React re-renders during scroll, but will not work for everything. Even when bindings do work, very complicated UIs will have significantly more complicated code and need to use more trickery than elements using state. `byTypedBinding` is `byBinding` for heterogeneous lists: it gives you the performance of `byBinding` while supporting multiple item types that would otherwise require `byState`.
