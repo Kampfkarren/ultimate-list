@@ -77,12 +77,8 @@ renderer = UltimateList.Renderers.byTypedBinding({
     renderers = {
         -- Text rows.
         function(binding: React.Binding<Item?>): React.Node?
-            -- Renderer functions are NOT component functions -- they run
-            -- exactly once per slot, at classification time. `:getValue()`
-            -- is safe here (and is how you classify) because we don't need
-            -- a fresh value later: once a slot is classified, it's
-            -- committed to this renderer for life, and any subsequent
-            -- value updates are reflected through `binding:map` below.
+            -- Classify by reading the current value. The renderer runs
+            -- once per slot, so we don't need to re-check on updates.
             local current = binding:getValue()
             if current == nil or current.type ~= "text" then
                 return nil
@@ -122,9 +118,7 @@ renderer = UltimateList.Renderers.byTypedBinding({
 Renderer functions are **not** component functions. They run once per slot, not on every re-render. You cannot call React hooks (`useState`, `useEffect`, etc.) inside them.
 :::
 
-A few rules:
-- If you want to take a slot but render nothing visible, return `false` (or any non-nil falsy value). The slot's binding is still claimed; the rendered subtree is just empty.
-- **If your data source emits the same key for two different items, those items must classify to the same renderer.** The slot is committed to one renderer for life, so changing classification under a stable key would mean a hook-shape mismatch on recycle. If you need an item to change type, give it a new key.
+A slot is committed to one renderer for life, so two items sharing a key must classify the same way. If you need an item's type to change, give it a new key.
 
 ## What should I choose?
 Which renderer to choose depends on your use case. `byState` is significantly more flexible and will work with any kind of element, `byBinding` is more performant due to not triggering any React re-renders during scroll, but will not work for everything. Even when bindings do work, very complicated UIs will have significantly more complicated code and need to use more trickery than elements using state. `byTypedBinding` is `byBinding` for heterogeneous lists: it gives you the performance of `byBinding` while supporting multiple item types that would otherwise require `byState`.

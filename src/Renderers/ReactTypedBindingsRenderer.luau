@@ -20,9 +20,8 @@ type Slot<T> = {
 	content: React.Node,
 }
 
--- A slot lives in exactly one pool for its lifetime; that structurally
--- enforces the "only recycled for items classified to the same renderer"
--- invariant without needing to carry the rendererIndex on each slot.
+-- One pool per renderer. Slots never move between pools, so they're only
+-- ever recycled for items classified to the same renderer.
 type SlotsByRenderer<T> = { [number]: { Slot<T> } }
 
 type RecycleQueuesByRenderer<T> = { [number]: { (LocatedItem<T>) -> () } }

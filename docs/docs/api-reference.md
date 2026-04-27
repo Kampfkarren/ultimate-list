@@ -147,9 +147,7 @@ Renderers.byTypedBinding<T>(
 ): Renderer<T>
 ```
 
-Creates a binding-based renderer with separate recycling pools per item type. Items are classified by the `renderers` array itself: each renderer receives the slot's binding and returns either a `React.Node` (claiming the slot) or `nil` (declining). Renderers are tried in array order exactly once per slot, at slot creation; the first non-nil wins and its returned node is the slot's subtree for life.
-
-- `config.renderers: { (React.Binding<T?>) -> React.Node? }`: An ordered array of self-classifying renderers. See the [typed bindings section](./core-concepts/renderers#typed-bindings) for the rules each renderer must follow -- in particular, items sharing a key across renders must classify to the same renderer.
+Creates a binding-based renderer with separate recycling pools per item type. Each renderer in `config.renderers` receives the slot's binding and returns either a `React.Node` (claiming the slot) or `nil` (declining). Renderers are tried in array order exactly once per slot, at slot creation; the first non-nil wins and its returned node is the slot's subtree for life.
 
 See also ["Typed Bindings" section on the renderers documentation](./core-concepts/renderers#typed-bindings).
 
