@@ -67,5 +67,58 @@ end)
 
 UltimateList will render as many of these elements as it thinks it will need (e.g. if your [dimensions are a consistent height](./dimensions#consistent-one-dimensional-size), then it will create as many of those as will fit in the height). It will then avoid any re-renders until it has to, such as when it realizes it doesn't have enough elements to render. That is why the binding returns `T?`--you must be able to represent an as-of-yet unused rendered item. It doesn't matter what you do with that, the container its in will be invisible no matter what, you just have to make sure you don't error.
 
+## Typed Bindings
+If your list contains multiple kinds of items (e.g. images, text, and buttons), you can use `UltimateList.Renderers.byTypedBinding`. This gives you the zero-rerender recycling performance of `byBinding`, but with separate recycling pools for each item type. Slots are never recycled across types, so each type can safely use different hooks and component trees.
+
+You provide an ordered array of self-classifying renderers. Each renderer takes a `Binding<T?>` and returns either a `React.Node` ("I handle this value") or `nil` ("try the next renderer"). When a new item enters the viewport, renderers are tried in array order; the first to return a non-nil node claims the slot, and its returned node becomes the slot's subtree for life.
+
+```lua
+renderer = UltimateList.Renderers.byTypedBinding({
+    renderers = {
+        -- Text rows.
+        function(binding: React.Binding<Item?>): React.Node?
+            -- Classify by reading the current value. The renderer runs
+            -- once per slot, so we don't need to re-check on updates.
+            local current = binding:getValue()
+            if current == nil or current.type ~= "text" then
+                return nil
+            end
+
+            return React.createElement("TextLabel", {
+                Size = UDim2.fromScale(1, 1),
+                Font = Enum.Font.BuilderSans,
+                TextSize = 20,
+                Text = binding:map(function(item: Item?)
+                    return if item and item.type == "text" then item.text else ""
+                end),
+            })
+        end,
+
+        -- Category headers.
+        function(binding: React.Binding<Item?>): React.Node?
+            local current = binding:getValue()
+            if current == nil or current.type ~= "category" then
+                return nil
+            end
+
+            return React.createElement("TextLabel", {
+                Size = UDim2.fromScale(1, 1),
+                Font = Enum.Font.BuilderSansBold,
+                TextSize = 30,
+                Text = binding:map(function(item: Item?)
+                    return if item and item.type == "category" then item.name else ""
+                end),
+            })
+        end,
+    },
+})
+```
+
+:::warning
+Renderer functions are **not** component functions. They run once per slot, not on every re-render. You cannot call React hooks (`useState`, `useEffect`, etc.) inside them.
+:::
+
+Each slot is committed to one renderer for life, so the `getKey` you pass to `ScrollingFrame` must always return the same string for items of the same type. The default index-based key is unsafe for lists whose length changes -- pass a `getKey` derived from the item itself.
+
 ## What should I choose?
-Which renderer to choose depends on your use case. `byState` is significantly more flexible and will work with any kind of element, `byBinding` is more performant due to not triggering any React re-renders during scroll, but will not work for everything. Even when bindings do work, very complicated UIs will have significantly more complicated code and need to use more trickery than elements using state.
+Which renderer to choose depends on your use case. `byState` is significantly more flexible and will work with any kind of element, `byBinding` is more performant due to not triggering any React re-renders during scroll, but will not work for everything. Even when bindings do work, very complicated UIs will have significantly more complicated code and need to use more trickery than elements using state. `byTypedBinding` is `byBinding` for heterogeneous lists: it gives you the performance of `byBinding` while supporting multiple item types that would otherwise require `byState`.

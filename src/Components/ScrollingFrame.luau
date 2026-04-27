@@ -6,6 +6,7 @@ local Dimensions = require(Src.Dimensions)
 local React = require(Src.Parent.React)
 local ReactBindingsRenderer = require(Src.Renderers.ReactBindingsRenderer)
 local ReactStateRenderer = require(Src.Renderers.ReactStateRenderer)
+local ReactTypedBindingsRenderer = require(Src.Renderers.ReactTypedBindingsRenderer)
 local Renderers = require(Src.Renderers)
 local createVirtualizedListController = require(Src.createVirtualizedListController)
 local exhaustiveMatch = require(Src.Util.exhaustiveMatch)
@@ -148,6 +149,16 @@ local function ScrollingFrame<T>(
 					direction = props.direction,
 
 					callback = props.renderer.callback,
+					getKey = props.getKey,
+				})
+				elseif props.renderer.type == "byTypedBinding" then e(ReactTypedBindingsRenderer, {
+					virtualizedListController = virtualizedListController,
+					scrollAxisBinding = scrollAxisBinding,
+
+					dimensions = props.dimensions,
+					direction = props.direction,
+
+					renderers = props.renderer.renderers,
 					getKey = props.getKey,
 				})
 				else exhaustiveMatch(props.renderer.type),
