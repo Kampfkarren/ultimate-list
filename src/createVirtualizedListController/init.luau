@@ -154,7 +154,7 @@ local function createVirtualizedListController<T>(
 
 			currentView = {
 				range = newIndexRange,
-				canvasSize = UDim2.new(),
+				canvasSize = DimensionsMethods.getCanvasSize(dimensions, dataSource, windowSize, direction),
 				windowSize = windowSize,
 				lastDimensions = dimensions,
 				cachedLastResult = {},
