@@ -15,6 +15,7 @@ export type VirtualizedListController<T> = {
 
 	setWindowSize: (windowSize: Vector2) -> (),
 	getWindowSize: () -> Vector2,
+	setOverscan: (overscan: number) -> (),
 
 	setDataSource: (DataSources.DataSource<T>) -> (),
 	setDimensions: (Dimensions.Dimensions<T>) -> (),
@@ -58,15 +59,30 @@ local function createVirtualizedListController<T>(
 
 	local windowAxis = 0
 	local windowSize = Vector2.new()
+	local overscan = 0
 
-	local function getIndexRangeInViewForSize(size: number): Vector3
-		local head = 1 + scrollAxis // size
-		local tail = 1 + ((scrollAxis + windowAxis) // size)
+	local function getRangeAxes(): (number, number)
+		local rangeScrollAxis = math.max(0, scrollAxis - overscan)
+		local rangeEndAxis = scrollAxis + windowAxis + overscan
+		return rangeScrollAxis, rangeEndAxis - rangeScrollAxis
+	end
+
+	local function getIndexRangeInViewForSize(
+		size: number,
+		rangeScrollAxis: number,
+		rangeWindowAxis: number
+	): Vector3
+		local head = 1 + rangeScrollAxis // size
+		local tail = 1 + ((rangeScrollAxis + rangeWindowAxis) // size)
 
 		return Vector3.new(head, tail)
 	end
 
-	local function getIndexRangeInViewForUDim2(udim2: UDim2): Vector3
+	local function getIndexRangeInViewForUDim2(
+		udim2: UDim2,
+		rangeScrollAxis: number,
+		rangeWindowAxis: number
+	): Vector3
 		-- Amount per row if we're Y direction,
 		-- amount per column if we're X.
 		local amountPerNonDominant = DimensionsMethods.getAmountPerNonDominantInGrid(udim2, windowSize, direction)
@@ -76,13 +92,13 @@ local function createVirtualizedListController<T>(
 			elseif direction == "y" then udim2.Y.Offset
 			else exhaustiveMatch(direction)
 
-		local head = 1 + ((scrollAxis // dominantSize) * amountPerNonDominant)
-		local tail = (1 + ((scrollAxis + windowAxis) // dominantSize)) * amountPerNonDominant
+		local head = 1 + ((rangeScrollAxis // dominantSize) * amountPerNonDominant)
+		local tail = (1 + ((rangeScrollAxis + rangeWindowAxis) // dominantSize)) * amountPerNonDominant
 
 		log(
 			"getIndexRangeInView: amountPerNonDominant = %d, scrollAxis = %d, dominantSize = %d. Going from %d to %d",
 			amountPerNonDominant,
-			scrollAxis,
+			rangeScrollAxis,
 			dominantSize,
 			head,
 			tail
@@ -95,22 +111,36 @@ local function createVirtualizedListController<T>(
 	-- consistentSize: O(1)
 	-- getter: O(log n) assuming getter is O(1)
 	local function getIndexRangeInView(): Vector3
+		local rangeScrollAxis, rangeWindowAxis = getRangeAxes()
+
 		if dimensions.type == "consistentUDim2" then
-			return getIndexRangeInViewForUDim2(dimensions.udim2)
+			return getIndexRangeInViewForUDim2(dimensions.udim2, rangeScrollAxis, rangeWindowAxis)
 		elseif dimensions.type == "consistentSize" then
-			return getIndexRangeInViewForSize(dimensions.size)
+			return getIndexRangeInViewForSize(dimensions.size, rangeScrollAxis, rangeWindowAxis)
 		elseif dimensions.type == "getter" then
-			return binarySearchIndexRangeInView(dataSource, dimensions.callback, scrollAxis, windowAxis, direction)
+			return binarySearchIndexRangeInView(
+				dataSource,
+				dimensions.callback,
+				rangeScrollAxis,
+				rangeWindowAxis,
+				direction
+			)
 		elseif dimensions.type == "spaced" then
 			if dimensions.inner.type == "consistentSize" then
-				return getIndexRangeInViewForSize(dimensions.inner.size + dimensions.spacing)
+				return getIndexRangeInViewForSize(
+					dimensions.inner.size + dimensions.spacing,
+					rangeScrollAxis,
+					rangeWindowAxis
+				)
 			elseif dimensions.inner.type == "consistentUDim2" then
 				return getIndexRangeInViewForUDim2(
 					dimensions.inner.udim2
 						+ UDim2.fromOffset(
 							if direction == "x" then dimensions.spacing else 0,
 							if direction == "y" then dimensions.spacing else 0
-						)
+						),
+					rangeScrollAxis,
+					rangeWindowAxis
 				)
 			elseif dimensions.inner.type == "spaced" or dimensions.inner.type == "getter" then
 				error("Unsupported spaced dimensions")
@@ -131,11 +161,13 @@ local function createVirtualizedListController<T>(
 	end
 
 	local function update()
+		local rangeScrollAxis, rangeWindowAxis = getRangeAxes()
+
 		-- Only re-check if we actually will see anything new
 		if
 			currentView.offsetBoundaries ~= nil
-			and currentView.offsetBoundaries.X <= scrollAxis
-			and currentView.offsetBoundaries.Y >= windowAxis + scrollAxis
+			and currentView.offsetBoundaries.X <= rangeScrollAxis
+			and currentView.offsetBoundaries.Y >= rangeWindowAxis + rangeScrollAxis
 			and currentView.windowSize == windowSize
 			-- TODO: If append only, just check length, though make sure
 			-- that it still works if the window hasn't been tall enough to
@@ -154,11 +186,11 @@ local function createVirtualizedListController<T>(
 
 			currentView = {
 				range = newIndexRange,
-				canvasSize = UDim2.new(),
+				canvasSize = DimensionsMethods.getCanvasSize(dimensions, dataSource, windowSize, direction),
 				windowSize = windowSize,
 				lastDimensions = dimensions,
 				cachedLastResult = {},
-				offsetBoundaries = Vector3.new(scrollAxis, windowAxis + scrollAxis),
+				offsetBoundaries = Vector3.new(rangeScrollAxis, rangeWindowAxis + rangeScrollAxis),
 				dataSource = dataSource,
 			}
 
@@ -245,6 +277,17 @@ local function createVirtualizedListController<T>(
 		return windowSize
 	end
 
+	local function setOverscan(newOverscan: number)
+		assert(newOverscan >= 0, "overscan must not be negative")
+
+		if overscan == newOverscan then
+			return
+		end
+
+		overscan = newOverscan
+		update()
+	end
+
 	local function get(): { T }
 		return currentView.cachedLastResult
 	end
@@ -281,6 +324,7 @@ local function createVirtualizedListController<T>(
 
 		setWindowSize = setWindowSize,
 		getWindowSize = getWindowSize,
+		setOverscan = setOverscan,
 
 		get = get,
 		getCanvasSize = getCanvasSize,

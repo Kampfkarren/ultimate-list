@@ -115,6 +115,8 @@ end)
 
 The other dimensions all operate in constant time for fetching elements, whereas getters perform an `O(log n)` binary search.
 
+The getter must return immediately. If a size requires asynchronous work such as `TextService:GetTextBoundsAsync`, complete that work before inserting the item and store the measured size and absolute offset with the item. Items must be ordered by their dominant-axis positions for the binary search, and the final item must reach the furthest canvas extent.
+
 See [Supporting different items](../guides/supporting-different-items) for an example on real code using dynamic getters.
 
 ## Spaced dimensions

@@ -45,3 +45,7 @@ You cannot set the following keys, as UltimateList relies on them:
 There are some keys that will not error, but that you should use other ways of changing:
 - **React.Tag** - Use `tag` prop instead.
 - **ref** - Use `scrollingFrameRef` prop instead.
+
+## Externally owned ScrollingFrames
+
+When using [`VirtualizedContent`](./external-scrollers), style and configure the owner-created ScrollingFrame directly. `VirtualizedContent` does not accept `tag` or `native` because it does not own the native scrolling instance.

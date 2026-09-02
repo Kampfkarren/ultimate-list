@@ -4,11 +4,10 @@ local Src = script:FindFirstAncestor("ultimate-list")
 local DataSources = require(Src.DataSources)
 local Dimensions = require(Src.Dimensions)
 local React = require(Src.Parent.React)
-local ReactBindingsRenderer = require(Src.Renderers.ReactBindingsRenderer)
-local ReactStateRenderer = require(Src.Renderers.ReactStateRenderer)
+local RendererOverlay = require(script.Parent.RendererOverlay)
 local Renderers = require(Src.Renderers)
-local createVirtualizedListController = require(Src.createVirtualizedListController)
 local exhaustiveMatch = require(Src.Util.exhaustiveMatch)
+local useVirtualizedList = require(script.Parent.useVirtualizedList)
 
 local e = React.createElement
 
@@ -26,34 +25,16 @@ local function ScrollingFrame<T>(
 		scrollingFrameRef: React.Ref<ScrollingFrame>?,
 		onAbsoluteWindowSizeChanged: ((newWindowSize: Vector2) -> ())?,
 		onScrollAxisChanged: ((newScrollAxis: number) -> ())?,
+		overscan: number?,
 
 		tag: string?,
 		native: { [any]: any }?,
 	}
 )
-	local virtualizedListController = React.useState(function()
-		return createVirtualizedListController(props.dataSource, props.dimensions, props.direction)
-	end)
-
-	React.useEffect(function()
-		return function()
-			return virtualizedListController.destroy()
-		end
-	end, {})
-
-	local canvasSizeBinding, setCanvasSize = React.useBinding(virtualizedListController.getCanvasSize())
-	local windowSizeBinding, setWindowSize = React.useBinding(Vector2.zero)
-	local scrollAxisBinding, setScrollAxis = React.useBinding(0)
-
-	React.useEffect(function()
-		return virtualizedListController.bindToUpdate(function()
-			setCanvasSize(virtualizedListController.getCanvasSize())
-		end)
-	end, {})
+	local virtualizedList = useVirtualizedList(props)
 
 	local onAbsoluteWindowSizeChanged = React.useCallback(function(instance: ScrollingFrame)
-		setWindowSize(instance.AbsoluteWindowSize)
-		virtualizedListController.setWindowSize(instance.AbsoluteWindowSize)
+		virtualizedList.setWindowSize(instance.AbsoluteWindowSize)
 
 		if props.onAbsoluteWindowSizeChanged ~= nil then
 			props.onAbsoluteWindowSizeChanged(instance.AbsoluteWindowSize)
@@ -69,8 +50,7 @@ local function ScrollingFrame<T>(
 		-- In deferred signals, position properties update only on the frame *after*,
 		-- which causes visible flickering.
 		RunService.Heartbeat:Once(function()
-			virtualizedListController.setScrollAxis(scrollAxis)
-			setScrollAxis(scrollAxis)
+			virtualizedList.setScrollAxis(scrollAxis)
 
 			if props.onScrollAxisChanged ~= nil then
 				props.onScrollAxisChanged(scrollAxis)
@@ -78,18 +58,10 @@ local function ScrollingFrame<T>(
 		end)
 	end, { props.direction, props.onScrollAxisChanged } :: { unknown })
 
-	React.useEffect(function()
-		virtualizedListController.setDataSource(props.dataSource)
-	end, { props.dataSource })
-
-	React.useEffect(function()
-		virtualizedListController.setDimensions(props.dimensions)
-	end, { props.dimensions })
-
 	local scrollingFrameProps = {
 		Size = UDim2.fromScale(1, 1),
 
-		CanvasSize = canvasSizeBinding,
+		CanvasSize = virtualizedList.canvasSizeBinding,
 
 		-- Luau: No multiple indexers
 		[React.Change.AbsoluteWindowSize] = onAbsoluteWindowSizeChanged :: any,
@@ -117,40 +89,15 @@ local function ScrollingFrame<T>(
 
 		-- This is outside of the scrolling frame because CanvasPosition updates a bit too late even
 		-- in the case of bindings, showing you emptiness before we have a chance to react.
-		RendererOverlay = e("Frame", {
-			BackgroundTransparency = 1,
-			ClipsDescendants = true,
-			-- Match window size so you can still see scroll bar
-			Size = windowSizeBinding:map(function(windowSize: Vector2)
-				return UDim2.fromOffset(windowSize.X, windowSize.Y)
-			end),
-			ZIndex = 2,
-		}, {
-			Renderer = if props.renderer.type == "byState"
-				then e(ReactStateRenderer, {
-					virtualizedListController = virtualizedListController,
+		RendererOverlay = e(RendererOverlay, {
+			dimensions = props.dimensions,
+			renderer = props.renderer,
+			getKey = props.getKey,
+			direction = props.direction,
 
-					config = props.renderer.config,
-
-					dimensions = props.dimensions,
-					direction = props.direction,
-
-					callback = props.renderer.callback,
-					getKey = props.getKey,
-
-					scrollAxisBinding = scrollAxisBinding,
-				})
-				elseif props.renderer.type == "byBinding" then e(ReactBindingsRenderer, {
-					virtualizedListController = virtualizedListController,
-					scrollAxisBinding = scrollAxisBinding,
-
-					dimensions = props.dimensions,
-					direction = props.direction,
-
-					callback = props.renderer.callback,
-					getKey = props.getKey,
-				})
-				else exhaustiveMatch(props.renderer.type),
+			virtualizedListController = virtualizedList.virtualizedListController,
+			windowSizeBinding = virtualizedList.windowSizeBinding,
+			scrollAxisBinding = virtualizedList.scrollAxisBinding,
 		}),
 	})
 end
