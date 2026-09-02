@@ -25,7 +25,7 @@ Creates a ScrollingFrame that will make a virtualized list based on your specifi
 - `onScrollAxisChanged: (newScrollAxis: number) -> ()`: A callback that will run when the ScrollingFrame changes CanvasPosition. The number provided is the position of the dominant axis--so in a vertical list, it represents `CanvasPosition.Y`.
 - `overscan: number`: The number of extra dominant-axis pixels to virtualize before and after the window. Defaults to 0.
 
-### `ScrollingFrameContent<T>`
+### `VirtualizedContent<T>`
 Creates virtualized content for a `ScrollingFrame` owned by another component. It must be rendered inside that ScrollingFrame's canvas and does not create another ScrollingFrame.
 
 `T` is the type of the items we are representing.
@@ -43,7 +43,7 @@ Creates virtualized content for a `ScrollingFrame` owned by another component. I
 - `onScrollAxisChanged: (newScrollAxis: number) -> ()`: Runs with the initial dominant-axis CanvasPosition and when it changes.
 - `overscan: number`: The number of extra dominant-axis pixels to virtualize before and after the window. Defaults to 0.
 
-`ScrollingFrameContent` exposes the list's canvas extent through the size of its transparent root. The external owner remains responsible for canvas sizing, scrolling properties, styling, and viewport clipping. See [Using an external ScrollingFrame](./guides/external-scrollers) for the complete contract.
+`VirtualizedContent` exposes the list's canvas extent through the size of its transparent root. The external owner remains responsible for canvas sizing, scrolling properties, styling, and viewport clipping. See [Using an external ScrollingFrame](./guides/external-scrollers) for the complete contract.
 
 ## DebugFlags
 Flags for configuring UltimateList.

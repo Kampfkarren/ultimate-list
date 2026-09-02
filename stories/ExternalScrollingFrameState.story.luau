@@ -88,7 +88,7 @@ local function Demo()
 			Size = UDim2.fromOffset(420, viewportHeight),
 			ref = scrollingFrameRef,
 		}, {
-			Content = e(UltimateList.Components.ScrollingFrameContent, {
+			Content = e(UltimateList.Components.VirtualizedContent, {
 				dataSource = UltimateList.DataSources.array(rows),
 				dimensions = UltimateList.Dimensions.getter(function(row: Row)
 					return {

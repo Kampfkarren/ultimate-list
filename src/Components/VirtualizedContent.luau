@@ -32,7 +32,7 @@ local function getContentSize(canvasSize: UDim2, direction: "x" | "y"): UDim2
 		else exhaustiveMatch(direction)
 end
 
-local function ScrollingFrameContent<T>(props: {
+local function VirtualizedContent<T>(props: {
 	dataSource: DataSources.DataSource<T>,
 	dimensions: Dimensions.Dimensions<T>,
 	renderer: Renderers.Renderer<T>,
@@ -54,7 +54,7 @@ local function ScrollingFrameContent<T>(props: {
 		local scrollingFrame = props.scrollingFrameRef.current
 		assert(
 			scrollingFrame ~= nil,
-			"ScrollingFrameContent requires scrollingFrameRef.current to point to its ancestor ScrollingFrame"
+			"VirtualizedContent requires scrollingFrameRef.current to point to its ancestor ScrollingFrame"
 		)
 
 		local lastWindowSize: Vector2? = nil
@@ -131,4 +131,4 @@ local function ScrollingFrameContent<T>(props: {
 	})
 end
 
-return ScrollingFrameContent
+return VirtualizedContent

@@ -1,9 +1,9 @@
 local ScrollingFrame = require(script.ScrollingFrame)
-local ScrollingFrameContent = require(script.ScrollingFrameContent)
+local VirtualizedContent = require(script.VirtualizedContent)
 
 local Components = {}
 
 Components.ScrollingFrame = ScrollingFrame
-Components.ScrollingFrameContent = ScrollingFrameContent
+Components.VirtualizedContent = VirtualizedContent
 
 return Components

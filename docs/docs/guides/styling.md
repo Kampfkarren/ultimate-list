@@ -48,4 +48,4 @@ There are some keys that will not error, but that you should use other ways of c
 
 ## Externally owned ScrollingFrames
 
-When using [`ScrollingFrameContent`](./external-scrollers), style and configure the owner-created ScrollingFrame directly. `ScrollingFrameContent` does not accept `tag` or `native` because it does not own the native scrolling instance.
+When using [`VirtualizedContent`](./external-scrollers), style and configure the owner-created ScrollingFrame directly. `VirtualizedContent` does not accept `tag` or `native` because it does not own the native scrolling instance.
