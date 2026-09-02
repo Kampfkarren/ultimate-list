@@ -20,6 +20,7 @@ local function useVirtualizedList<T>(props: {
 	dataSource: DataSources.DataSource<T>,
 	dimensions: Dimensions.Dimensions<T>,
 	direction: "x" | "y",
+	overscan: number?,
 }): VirtualizedList<T>
 	local virtualizedListController = React.useState(function()
 		return createVirtualizedListController(props.dataSource, props.dimensions, props.direction)
@@ -58,6 +59,10 @@ local function useVirtualizedList<T>(props: {
 	React.useEffect(function()
 		virtualizedListController.setDimensions(props.dimensions)
 	end, { props.dimensions })
+
+	React.useEffect(function()
+		virtualizedListController.setOverscan(props.overscan or 0)
+	end, { props.overscan })
 
 	return {
 		virtualizedListController = virtualizedListController,

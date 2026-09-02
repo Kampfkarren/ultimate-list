@@ -25,6 +25,7 @@ local function ScrollingFrame<T>(
 		scrollingFrameRef: React.Ref<ScrollingFrame>?,
 		onAbsoluteWindowSizeChanged: ((newWindowSize: Vector2) -> ())?,
 		onScrollAxisChanged: ((newScrollAxis: number) -> ())?,
+		overscan: number?,
 
 		tag: string?,
 		native: { [any]: any }?,

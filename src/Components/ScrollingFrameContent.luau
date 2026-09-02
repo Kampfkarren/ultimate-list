@@ -45,6 +45,7 @@ local function ScrollingFrameContent<T>(props: {
 	scrollingFrameRef: { current: ScrollingFrame? },
 	onAbsoluteWindowSizeChanged: ((newWindowSize: Vector2) -> ())?,
 	onScrollAxisChanged: ((newScrollAxis: number) -> ())?,
+	overscan: number?,
 })
 	local virtualizedList = useVirtualizedList(props)
 	local overlayPositionBinding, setOverlayPosition = React.useBinding(UDim2.new())

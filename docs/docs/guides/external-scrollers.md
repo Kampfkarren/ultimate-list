@@ -31,6 +31,7 @@ return React.createElement("ScrollingFrame", {
         end,
         direction = "y",
         scrollingFrameRef = scrollingFrameRef,
+        overscan = 240,
     }),
 })
 ```
@@ -46,6 +47,8 @@ return React.createElement("ScrollingFrame", {
 - The external ScrollingFrame supplies viewport clipping. Intermediate content containers must not clip the counter-translated renderer frame before it reaches that viewport.
 
 The renderer frame moves with the external CanvasPosition inside the scrolling canvas. UltimateList samples again during `RenderStepped` because deferred ScrollingFrame events can arrive before related layout properties have flushed together. Rows still use UltimateList's existing translated absolute positions inside that frame.
+
+Overscan defaults to 0 for both UltimateList components. An external in-canvas state renderer should usually set it explicitly; the extra rendered range prevents an empty edge while React commits after wheel or pan input. Choose the smallest buffer that covers expected scroll jumps without rendering unnecessary rows.
 
 ## Pre-measured variable rows
 

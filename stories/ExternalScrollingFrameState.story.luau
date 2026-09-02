@@ -108,13 +108,14 @@ local function Demo()
 						TextSize = 16,
 					})
 				end, {
-					freezeViewWhileScrolling = false,
+					freezeViewWhileScrolling = true,
 				}),
 				getKey = function(row: Row)
 					return row.id
 				end,
 				direction = "y",
 				scrollingFrameRef = scrollingFrameRef,
+				overscan = 240,
 			}),
 		}),
 	})

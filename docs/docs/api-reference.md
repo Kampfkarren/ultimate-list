@@ -23,6 +23,7 @@ Creates a ScrollingFrame that will make a virtualized list based on your specifi
 - `scrollingFrameRef: React.Ref<ScrollingFrame>`: A ref to the underlying ScrollingFrame. Note that the actual contents are stored in a separate frame that you cannot access.
 - `onAbsoluteWindowSizeChanged: (newWindowSize: Vector2) -> ()`: A callback that will run when the [window size of the ScrollingFrame](https://create.roblox.com/docs/reference/engine/classes/ScrollingFrame#AbsoluteWindowSize) changes.
 - `onScrollAxisChanged: (newScrollAxis: number) -> ()`: A callback that will run when the ScrollingFrame changes CanvasPosition. The number provided is the position of the dominant axis--so in a vertical list, it represents `CanvasPosition.Y`.
+- `overscan: number`: The number of extra dominant-axis pixels to virtualize before and after the window. Defaults to 0.
 
 ### `ScrollingFrameContent<T>`
 Creates virtualized content for a `ScrollingFrame` owned by another component. It must be rendered inside that ScrollingFrame's canvas and does not create another ScrollingFrame.
@@ -40,6 +41,7 @@ Creates virtualized content for a `ScrollingFrame` owned by another component. I
 - `getKey: (value: T, index: number) -> string`: A function that returns a unique key for an item. By default UltimateList uses the index.
 - `onAbsoluteWindowSizeChanged: (newWindowSize: Vector2) -> ()`: Runs with the initial external window size and when it changes.
 - `onScrollAxisChanged: (newScrollAxis: number) -> ()`: Runs with the initial dominant-axis CanvasPosition and when it changes.
+- `overscan: number`: The number of extra dominant-axis pixels to virtualize before and after the window. Defaults to 0.
 
 `ScrollingFrameContent` exposes the list's canvas extent through the size of its transparent root. The external owner remains responsible for canvas sizing, scrolling properties, styling, and viewport clipping. See [Using an external ScrollingFrame](./guides/external-scrollers) for the complete contract.
 
